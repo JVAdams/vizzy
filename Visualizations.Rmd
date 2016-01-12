@@ -1,0 +1,235 @@
+---
+title: "Recent Advances in Interactive Visualizations in R"
+author: "Jean V. Adams"
+date: "11 Jan 2016"
+output:
+  html_document: default
+subtitle: USGS-GLSC All Hands Meeting
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+
+# define two variables to keep track of Table and Figure numbers
+tabcount <- 1
+figcount <- 1
+```
+
+# **htmlwidgets** for R
+
+> HTML widgets work just like R plots except they produce interactive web visualizations. 
+
+> A line or two of R code is all it takes to produce a D3 graphic or Leaflet map. 
+
+> HTML widgets can be used at the R console as well as embedded in R Markdown reports and Shiny web applications.
+
+**DataTables** - Tabular data display   
+**MetricsGraphics** - Scatterplots and line charts with D3  
+**dygraphs** - Time series charting  
+**Leaflet** - Geo-spatial mapping  
+**networkD3** - Graph data visualization with D3  
+**d3heatmap** - Interactive heatmaps with D3  
+
+I will use historical data from the Lake Huron bottom trawl survey to demonstrate the capabilities of **htmlwidgets** for R.
+
+For more information, visit the **htmlwidgets** showcase at http://www.htmlwidgets.org/showcase_networkD3.html.
+
+# Read in the data
+
+```{r, echo=FALSE}
+setwd("C:/JVA/GitHub/vizzy")
+datadir <- "C:/JVA/Lakes Vessels/Huron/2012/"
+```
+
+```{r}
+op <- read.csv(paste0(datadir, "HURON_OP.csv"), as.is=TRUE, 
+  col.names=c("opid", "year", "vessel", "serial", "lake", "port", "cruise", 
+    "opdate", "time", "lat", "long", "surftemp", "weather", "windspeed", 
+    "seacond", "winddirect", "distance"))
+numvars <- c("lat", "long", "surftemp", "weather", "windspeed", "seacond", 
+  "winddirect", "distance")
+op[, numvars] <- apply(op[, numvars], 2, as.numeric)
+fixcoord <- function(ddmm.) {
+  dd <- floor(ddmm./100)
+  mm. <- ddmm. - 100*dd
+  dd. <- dd + mm./60
+  return(dd.)
+}
+op$long <- -fixcoord(op$long)
+op$lat <- fixcoord(op$lat)
+op$opdate <- as.Date(op$opdate, "%d-%b-%y")
+sel <- !apply(is.na(op[, c("lat", "long")]), 1, any)
+op <- op[sel, c("opid", "year", "vessel", "cruise", "serial", "port", "opdate", "time", "lat", "long", "surftemp")]
+
+trop <- read.csv(paste0(datadir, "HURON_TROP.csv"), as.is=TRUE, 
+  col.names=c("opid", "towtime", "fishtemp", "depth", "trdesign"))
+trop$fishtemp <- as.numeric(trop$fishtemp)
+
+optrop <- merge(op, trop)
+optrop$portf <- as.factor(optrop$port)
+
+cat <- read.csv(paste0(datadir, "HURON_TRCATCH.csv"), as.is=TRUE, 
+  col.names=c("opid", "stage", "species", "n", "weight", "lfn"))
+numvars <- c("stage", "weight", "lfn")
+cat[, numvars] <- apply(cat[, numvars], 2, as.numeric)
+```
+
+# DataTables - Tabular data display  
+
+**DataTables** displays R matrices or data frames as interactive HTML tables that support filtering, pagination, and sorting.
+
+```{r}
+library(DT)
+selvars <- c("opid", "year", "vessel", "cruise", "serial", "port", "opdate", 
+  "fishtemp", "depth")
+datatable(optrop[, selvars], options=list(pageLength=5), rownames=FALSE, 
+  caption="Example DataTables", filter="top")
+```
+
+# MetricsGraphics - Scatterplots and line charts with D3  
+
+MetricsGraphics enables easy creation of D3 scatterplots, line charts, and histograms.
+
+```{r}
+library(metricsgraphics)
+library(htmlwidgets)
+library(htmltools)
+library(dplyr)
+
+mjs_plot(optrop, x=depth, y=fishtemp) %>%
+  mjs_point(color_accessor=portf, size_accessor=surftemp, 
+    color_type="category") %>%
+  mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)")
+
+wh <- 500
+mjs_plot(optrop, x=depth, y=fishtemp, linked=TRUE, width=wh, height=wh, left=20, bottom=20) %>%
+  mjs_point(color_accessor=surftemp, size_accessor=surftemp, 
+    size_range=c(1, 10), color_type="category") %>%
+  mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)") -> plot1
+
+mjs_plot(optrop, x=portf, y=year, linked=TRUE, width=wh, height=wh) %>%
+  mjs_axis_y(min_y=1976, max_y=2012) %>%
+  mjs_point(color_accessor=surftemp, size_accessor=surftemp, 
+    size_range=c(1, 10), color_type="category") %>%
+  mjs_labs(x="Port code", y="Year") -> plot2
+
+mjs_grid(plot1, plot2, ncol=2, nrow=1)
+```
+
+# dygraphs - Time series charting  
+
+Dygraphs provides rich facilities for charting time-series data in R and includes support for many interactive features including series/point highlighting, zooming, and panning.
+
+
+
+# Leaflet - Geo-spatial mapping  
+
+Leaflet is a JavaScript library for creating dynamic maps that support panning and zooming along with various annotations like markers, polygons, and popups.
+
+```{r}
+# convert your data frame to a spatial data frame
+xy <- optrop[, c("long", "lat")]
+rest <- optrop[, !(names(optrop) %in% c("long", "lat"))]
+
+library(sp)
+spdf <- SpatialPointsDataFrame(coords=xy, data=rest,
+  proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+library(leaflet)
+pal <- colorNumeric("YlOrRd", NULL)
+leaflet(spdf, width=910, height=500) %>% 
+  addTiles() %>%
+  addCircleMarkers(color = ~pal(port))
+```
+
+
+# networkD3 - Graph data visualization with D3  
+
+
+
+# d3heatmap - Interactive heatmaps with D3  
+
+
+
+
+
+# Tables
+
+You can create tables using simple source code (Table `r tabcount`) or using the *knitr* function *kable* (Table `r tabcount + 1`).
+
+**Table `r tabcount`.** First few rows of *mtcars* using simple source code.
+```{r, comment=NA, echo=FALSE}
+head(mtcars)
+tabcount <- tabcount + 1
+```
+
+**Table `r tabcount`.** First few rows of *mtcars* using *kable*.
+```{r, results='asis', echo=FALSE}
+knitr::kable(head(mtcars))
+tabcount <- tabcount + 1
+```
+
+# Figures
+
+You create figures, either using the default size (Figure `r figcount`) or a custom size (Figure `r figcount + 1`).
+
+
+
+```{r}
+par(mar=c(4, 4, 1, 1), las=1)
+plot(cars)
+```
+
+**Figure `r figcount`.** Simple plot of *cars*, default size.
+
+```{r, echo=FALSE}
+figcount <- figcount + 1
+```
+
+
+
+```{r, fig.width=3, fig.height=3}
+par(mar=c(4, 4, 1, 1), las=1)
+plot(cars)
+```
+
+**Figure `r figcount`.** Simple plot of *cars*, custom size.
+
+```{r, echo=FALSE}
+figcount <- figcount + 1
+```
+
+
+
+# Miscellany
+
+## Header fonts 
+### Header 3 
+#### Header 4 
+##### Header 5 
+###### Header 6 
+
+# Lists
+
+Unordered List:
+
+* This item
+* That item
+    + A that subitem
+
+Ordered List:
+
+1. Item 1
+    a. Sub item a
+    a. Sub item b
+1. Item 2
+    
+You can write [equations](https://support.rstudio.com/hc/en-us/articles/200486328-Equations-in-R-Markdown), either inline, $A = \pi*r^{2}$, or centered,
+$$\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_{i}.$$
+
+You can write **bold**, *italics*, superscripts, R^2^, subscripts, X~ij~.  You can ~~cross things out~~.  And you can draw a horizontal line. 
+
+*** 
+
+> Block quote for a long piece of indented text. When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
