@@ -59,7 +59,7 @@ fixcoord <- function(ddmm.) {
 op$long <- -fixcoord(op$long)
 op$lat <- fixcoord(op$lat)
 op$opdate <- as.Date(op$opdate, "%d-%b-%y")
-sel <- !apply(is.na(op[, c("lat", "long")]), 1, any)
+sel <- !apply(is.na(op[, c("lat", "long")]), 1, any) & op$year %in% 2006:2010
 op <- op[sel, c("opid", "year", "vessel", "cruise", "serial", "port", "opdate", "time", "lat", "long", "surftemp")]
 
 trop <- read.csv(paste0(datadir, "HURON_TROP.csv"), as.is=TRUE, 
@@ -73,7 +73,10 @@ cat <- read.csv(paste0(datadir, "HURON_TRCATCH.csv"), as.is=TRUE,
   col.names=c("opid", "stage", "species", "n", "weight", "lfn"))
 numvars <- c("stage", "weight", "lfn")
 cat[, numvars] <- apply(cat[, numvars], 2, as.numeric)
+bigcat <- merge(optrop, cat)
 ```
+
+
 
 # DataTables - Tabular data display  
 
@@ -87,6 +90,8 @@ datatable(optrop[, selvars], options=list(pageLength=5), rownames=FALSE,
   caption="Example DataTables", filter="top")
 ```
 
+
+
 # MetricsGraphics - Scatterplots and line charts with D3  
 
 MetricsGraphics enables easy creation of D3 scatterplots, line charts, and histograms.
@@ -99,23 +104,25 @@ library(dplyr)
 
 mjs_plot(optrop, x=depth, y=fishtemp) %>%
   mjs_point(color_accessor=portf, size_accessor=surftemp, 
-    color_type="category") %>%
+    size_range=c(2, 15), color_type="category") %>%
   mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)")
 
 wh <- 500
 mjs_plot(optrop, x=depth, y=fishtemp, linked=TRUE, width=wh, height=wh, left=20, bottom=20) %>%
   mjs_point(color_accessor=surftemp, size_accessor=surftemp, 
-    size_range=c(1, 10), color_type="category") %>%
+    size_range=c(2, 15), color_type="category") %>%
   mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)") -> plot1
 
 mjs_plot(optrop, x=portf, y=year, linked=TRUE, width=wh, height=wh) %>%
-  mjs_axis_y(min_y=1976, max_y=2012) %>%
-  mjs_point(color_accessor=surftemp, size_accessor=surftemp, 
-    size_range=c(1, 10), color_type="category") %>%
+  mjs_axis_y(min_y=2006, max_y=2010) %>%
+  mjs_point(color_accessor=surftemp, color_range=c("lightgray", "darkgray"), size_accessor=surftemp, 
+    size_range=c(2, 15), color_type="category") %>%
   mjs_labs(x="Port code", y="Year") -> plot2
 
 mjs_grid(plot1, plot2, ncol=2, nrow=1)
 ```
+
+
 
 # dygraphs - Time series charting  
 
@@ -128,108 +135,133 @@ Dygraphs provides rich facilities for charting time-series data in R and include
 Leaflet is a JavaScript library for creating dynamic maps that support panning and zooming along with various annotations like markers, polygons, and popups.
 
 ```{r}
-# convert your data frame to a spatial data frame
-xy <- optrop[, c("long", "lat")]
-rest <- optrop[, !(names(optrop) %in% c("long", "lat"))]
-
-library(sp)
-spdf <- SpatialPointsDataFrame(coords=xy, data=rest,
-  proj4string = CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
-
 library(leaflet)
-pal <- colorNumeric("YlOrRd", NULL)
-leaflet(spdf, width=910, height=500) %>% 
+leaflet(optrop) %>% 
   addTiles() %>%
-  addCircleMarkers(color = ~pal(port))
+  addCircleMarkers(lng=~long, lat=~lat)
 ```
+
+Make the map bigger.
+
+```{r}
+leaflet(optrop, width=1000, height=600) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat)
+```
+
+Color the symbols by depth.
+
+```{r}
+numpal <- colorNumeric("Blues", NULL)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth))
+```
+
+Add a legend.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
+  addLegend("bottomleft", pal=numpal, values=~depth, opacity=1,
+    title="Bottom depth  (m)")
+```
+
+Highlight one year.
+
+```{r}
+facpal <- colorFactor(c("blue", "orange"), NULL)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~facpal(year==2010))
+```
+
+Provide a toggle for that one year.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long[year!=2010], lat=~lat[year!=2010], 
+    group="2006-2009") %>% 
+  addCircleMarkers(lng=~long[year==2010], lat=~lat[year==2010], 
+    group="2010") %>%   
+  addLayersControl(overlayGroups=c("2006-2009", "2010"),
+    options=layersControlOptions(collapsed=FALSE))
+```
+
+Show the opid when you click on a point.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, popup=~htmlEscape(as.character(opid)))
+```
+
+Use a different background map.
+
+```{r}
+leaflet(optrop) %>% 
+  addProviderTiles("CartoDB.Positron") %>%
+  addCircleMarkers(lng=~long, lat=~lat)
+```
+
+
 
 
 # networkD3 - Graph data visualization with D3  
 
+**networkD3** provides tools for creating D3 JavaScript network graphs from R.
+
+```{r}
+tot <- with(bigcat, tapply(n, list(opid, species), sum))
+
+co.occur.d <- dist(!is.na(t(tot)), method="binary")
+co.occur <- as.matrix(1 - co.occur.d)
+co.occur[upper.tri(co.occur, diag=TRUE)] <- NA
+
+library(reshape2)
+mylinks <- melt(co.occur, na.rm=TRUE)
+uniq.sp <- colnames(tot)
+mylinks$source <- match(mylinks$Var1, uniq.sp) - 1
+mylinks$target <- match(mylinks$Var2, uniq.sp) - 1
+library(plotrix)
+mylinks$width <- rescale(mylinks$value, c(0.1, 20))
+mylinks <- mylinks[mylinks$value > 0.2, ]
+
+mynodes <- data.frame(name=as.numeric(uniq.sp))
+mynodes$group <- floor(mynodes$name/100)
+mynodes$freq <- rescale(apply(tot, 2, sum, na.rm=TRUE), c(0.1, 30))
+
+library(networkD3)
+data(MisLinks, MisNodes)
+forceNetwork(Links=mylinks, Nodes=mynodes, Source="source", Target="target", 
+  Value="width", NodeID="name", Nodesize="freq", Group="group", opacity=0.9, 
+  fontSize=30, linkDistance=JS('function(d) {', 'return 10*d.value;', '}'))
+```
+
+We can also plot dendrograms.
+
+```{r}
+clusdat <- t(tot)
+clusdat[is.na(clusdat)] <- 0
+hc <- hclust(dist(clusdat))
+dendroNetwork(hc, fontSize=15, zoom=TRUE)
+```
 
 
 # d3heatmap - Interactive heatmaps with D3  
 
-
-
-
-
-# Tables
-
-You can create tables using simple source code (Table `r tabcount`) or using the *knitr* function *kable* (Table `r tabcount + 1`).
-
-**Table `r tabcount`.** First few rows of *mtcars* using simple source code.
-```{r, comment=NA, echo=FALSE}
-head(mtcars)
-tabcount <- tabcount + 1
-```
-
-**Table `r tabcount`.** First few rows of *mtcars* using *kable*.
-```{r, results='asis', echo=FALSE}
-knitr::kable(head(mtcars))
-tabcount <- tabcount + 1
-```
-
-# Figures
-
-You create figures, either using the default size (Figure `r figcount`) or a custom size (Figure `r figcount + 1`).
-
+Interactive heatmaps with D3 including support for row/column highlighting and zooming.
 
 
 ```{r}
-par(mar=c(4, 4, 1, 1), las=1)
-plot(cars)
-```
+pd <- with(bigcat, tapply(n, list(port + depth/1000, species), mean))
+pd[is.na(pd)] <- 0
 
-**Figure `r figcount`.** Simple plot of *cars*, default size.
-
-```{r, echo=FALSE}
-figcount <- figcount + 1
-```
-
-
-
-```{r, fig.width=3, fig.height=3}
-par(mar=c(4, 4, 1, 1), las=1)
-plot(cars)
-```
-
-**Figure `r figcount`.** Simple plot of *cars*, custom size.
-
-```{r, echo=FALSE}
-figcount <- figcount + 1
+library(d3heatmap)
+d3heatmap(pd, scale="column", colors="Blues",
+  xaxis_font_size="16pt", yaxis_font_size="16pt")
 ```
 
 
-
-# Miscellany
-
-## Header fonts 
-### Header 3 
-#### Header 4 
-##### Header 5 
-###### Header 6 
-
-# Lists
-
-Unordered List:
-
-* This item
-* That item
-    + A that subitem
-
-Ordered List:
-
-1. Item 1
-    a. Sub item a
-    a. Sub item b
-1. Item 2
-    
-You can write [equations](https://support.rstudio.com/hc/en-us/articles/200486328-Equations-in-R-Markdown), either inline, $A = \pi*r^{2}$, or centered,
-$$\bar{x} = \frac{1}{n} \sum_{i=1}^{n} x_{i}.$$
-
-You can write **bold**, *italics*, superscripts, R^2^, subscripts, X~ij~.  You can ~~cross things out~~.  And you can draw a horizontal line. 
-
-*** 
-
-> Block quote for a long piece of indented text. When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
