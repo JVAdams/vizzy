@@ -16,6 +16,8 @@ tabcount <- 1
 figcount <- 1
 ```
 
+
+
 # **htmlwidgets** for R
 
 > HTML widgets work just like R plots except they produce interactive web visualizations. 
@@ -25,15 +27,14 @@ figcount <- 1
 > HTML widgets can be used at the R console as well as embedded in R Markdown reports and Shiny web applications.
 
 **DataTables** - Tabular data display   
-**MetricsGraphics** - Scatterplots and line charts with D3  
-**dygraphs** - Time series charting  
 **Leaflet** - Geo-spatial mapping  
-**networkD3** - Graph data visualization with D3  
 **d3heatmap** - Interactive heatmaps with D3  
 
 I will use historical data from the Lake Huron bottom trawl survey to demonstrate the capabilities of **htmlwidgets** for R.
 
 For more information, visit the **htmlwidgets** showcase at http://www.htmlwidgets.org/showcase_networkD3.html.
+
+
 
 # Read in the data
 
@@ -89,44 +90,6 @@ selvars <- c("opid", "year", "vessel", "cruise", "serial", "port", "opdate",
 datatable(optrop[, selvars], options=list(pageLength=5), rownames=FALSE, 
   caption="Example DataTables", filter="top")
 ```
-
-
-
-# MetricsGraphics - Scatterplots and line charts with D3  
-
-MetricsGraphics enables easy creation of D3 scatterplots, line charts, and histograms.
-
-```{r}
-library(metricsgraphics)
-library(htmlwidgets)
-library(htmltools)
-library(dplyr)
-
-mjs_plot(optrop, x=depth, y=fishtemp) %>%
-  mjs_point(color_accessor=portf, size_accessor=surftemp, 
-    size_range=c(2, 15), color_type="category") %>%
-  mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)")
-
-wh <- 500
-mjs_plot(optrop, x=depth, y=fishtemp, linked=TRUE, width=wh, height=wh, left=20, bottom=20) %>%
-  mjs_point(color_accessor=surftemp, size_accessor=surftemp, 
-    size_range=c(2, 15), color_type="category") %>%
-  mjs_labs(x="Bottom depth  (m)", y="Fishing temperature  (C)") -> plot1
-
-mjs_plot(optrop, x=portf, y=year, linked=TRUE, width=wh, height=wh) %>%
-  mjs_axis_y(min_y=2006, max_y=2010) %>%
-  mjs_point(color_accessor=surftemp, color_range=c("lightgray", "darkgray"), size_accessor=surftemp, 
-    size_range=c(2, 15), color_type="category") %>%
-  mjs_labs(x="Port code", y="Year") -> plot2
-
-mjs_grid(plot1, plot2, ncol=2, nrow=1)
-```
-
-
-
-# dygraphs - Time series charting  
-
-Dygraphs provides rich facilities for charting time-series data in R and includes support for many interactive features including series/point highlighting, zooming, and panning.
 
 
 
@@ -193,6 +156,7 @@ leaflet(optrop) %>%
 Show the opid when you click on a point.
 
 ```{r}
+library(htmltools)
 leaflet(optrop) %>% 
   addTiles() %>%
   addCircleMarkers(lng=~long, lat=~lat, popup=~htmlEscape(as.character(opid)))
@@ -209,59 +173,47 @@ leaflet(optrop) %>%
 
 
 
-# networkD3 - Graph data visualization with D3  
-
-**networkD3** provides tools for creating D3 JavaScript network graphs from R.
-
-```{r}
-tot <- with(bigcat, tapply(n, list(opid, species), sum))
-
-co.occur.d <- dist(!is.na(t(tot)), method="binary")
-co.occur <- as.matrix(1 - co.occur.d)
-co.occur[upper.tri(co.occur, diag=TRUE)] <- NA
-
-library(reshape2)
-mylinks <- melt(co.occur, na.rm=TRUE)
-uniq.sp <- colnames(tot)
-mylinks$source <- match(mylinks$Var1, uniq.sp) - 1
-mylinks$target <- match(mylinks$Var2, uniq.sp) - 1
-library(plotrix)
-mylinks$width <- rescale(mylinks$value, c(0.1, 20))
-mylinks <- mylinks[mylinks$value > 0.2, ]
-
-mynodes <- data.frame(name=as.numeric(uniq.sp))
-mynodes$group <- floor(mynodes$name/100)
-mynodes$freq <- rescale(apply(tot, 2, sum, na.rm=TRUE), c(0.1, 30))
-
-library(networkD3)
-data(MisLinks, MisNodes)
-forceNetwork(Links=mylinks, Nodes=mynodes, Source="source", Target="target", 
-  Value="width", NodeID="name", Nodesize="freq", Group="group", opacity=0.9, 
-  fontSize=30, linkDistance=JS('function(d) {', 'return 10*d.value;', '}'))
-```
-
-We can also plot dendrograms.
-
-```{r}
-clusdat <- t(tot)
-clusdat[is.na(clusdat)] <- 0
-hc <- hclust(dist(clusdat))
-dendroNetwork(hc, fontSize=15, zoom=TRUE)
-```
-
-
 # d3heatmap - Interactive heatmaps with D3  
 
 Interactive heatmaps with D3 including support for row/column highlighting and zooming.
 
-
 ```{r}
 pd <- with(bigcat, tapply(n, list(port + depth/1000, species), mean))
 pd[is.na(pd)] <- 0
+pd <- sqrt(pd)
 
 library(d3heatmap)
-d3heatmap(pd, scale="column", colors="Blues",
-  xaxis_font_size="16pt", yaxis_font_size="16pt")
+d3heatmap(pd)
+```
+
+Increase size.
+
+```{r}
+d3heatmap(pd, width=900, height=600)
+```
+
+Increase font size.
+
+```{r}
+d3heatmap(pd, cexRow=2, cexCol=2)
+```
+
+Change colors.
+
+```{r}
+d3heatmap(pd, colors="Blues")
+```
+
+Change column order.
+
+```{r}
+d3heatmap(pd, Colv=FALSE)
+```
+
+Change row order.
+
+```{r}
+d3heatmap(pd, Rowv=FALSE)
 ```
 
 
