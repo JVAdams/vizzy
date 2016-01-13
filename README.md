@@ -1,5 +1,5 @@
 # Visualizations
 
-I created **vizzy** to post examples of visualizations as I am developing them.
-Typically these examples will be simplified versions of the ultimate visualizations as I fine tune features.
-This should also make it easier for others to grab and modify the code to suit their own needs.
+### 2016 USGS-GLSC All Hands Meeting
+
+#### **Presentation**: [Recent Advances in Interactive Visualizations in R](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)

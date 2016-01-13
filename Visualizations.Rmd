@@ -1,9 +1,14 @@
 ---
 title: "Recent Advances in Interactive Visualizations in R"
 author: "Jean V. Adams"
-date: "11 Jan 2016"
+date: "13 Jan 2016"
 output:
-  html_document: default
+  html_document:
+    toc: TRUE
+    toc_depth: 1
+    number_sections: true
+    theme: cerulean
+    highlight: tango
 subtitle: USGS-GLSC All Hands Meeting
 ---
 
@@ -16,27 +21,40 @@ tabcount <- 1
 figcount <- 1
 ```
 
+This presentation is available at my GitHub site, in the **vizzy** repository, **https://github.com/JVAdams/vizzy**.
 
 
-# **htmlwidgets** for R
 
-> HTML widgets work just like R plots except they produce interactive web visualizations. 
+# HTML widgets for R
 
-> A line or two of R code is all it takes to produce a D3 graphic or Leaflet map. 
+HTML widgets produce interactive web visualizations. 
 
-> HTML widgets can be used at the R console as well as embedded in R Markdown reports and Shiny web applications.
+A few lines of R code is all it takes. 
 
-**DataTables** - Tabular data display   
-**Leaflet** - Geo-spatial mapping  
-**d3heatmap** - Interactive heatmaps with D3  
+* Data tables - Tabular data display   
+* Leaflet - Geo-spatial mapping  
+* D3 heatmap - Interactive heatmaps with D3  
 
-I will use historical data from the Lake Huron bottom trawl survey to demonstrate the capabilities of **htmlwidgets** for R.
+What you need
 
-For more information, visit the **htmlwidgets** showcase at http://www.htmlwidgets.org/showcase_networkD3.html.
+ * R - [download](https://cran.r-project.org/bin/windows/base/R-3.2.3-win.exe) and install
+ * Packages - install
+
+```{r, eval=FALSE}
+install.packages(c(
+  "DT",
+  "leaflet",
+  "d3heatmap"
+)
+```
+
+For more information, visit the HTML widgets [showcase](http://www.htmlwidgets.org/showcase_leaflet.html).
 
 
 
 # Read in the data
+
+I will use historical data from the Lake Huron bottom trawl survey to demonstrate the capabilities of HTML widgets for R.
 
 ```{r, echo=FALSE}
 setwd("C:/JVA/GitHub/vizzy")
@@ -79,7 +97,7 @@ bigcat <- merge(optrop, cat)
 
 
 
-# DataTables - Tabular data display  
+# **DataTables** - Tabular data display  
 
 **DataTables** displays R matrices or data frames as interactive HTML tables that support filtering, pagination, and sorting.
 
@@ -93,9 +111,9 @@ datatable(optrop[, selvars], options=list(pageLength=5), rownames=FALSE,
 
 
 
-# Leaflet - Geo-spatial mapping  
+# **Leaflet** - Geo-spatial mapping  
 
-Leaflet is a JavaScript library for creating dynamic maps that support panning and zooming along with various annotations like markers, polygons, and popups.
+**Leaflet** is a JavaScript library for creating dynamic maps that support panning and zooming along with various annotations like markers, polygons, and popups.
 
 ```{r}
 library(leaflet)
@@ -104,7 +122,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
 
-Make the map bigger.
+## Make the map bigger.
 
 ```{r}
 leaflet(optrop, width=1000, height=600) %>% 
@@ -112,7 +130,7 @@ leaflet(optrop, width=1000, height=600) %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
 
-Color the symbols by depth.
+## Color the symbols by depth.
 
 ```{r}
 numpal <- colorNumeric("Blues", NULL)
@@ -121,7 +139,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth))
 ```
 
-Add a legend.
+## Add a legend.
 
 ```{r}
 leaflet(optrop) %>% 
@@ -131,7 +149,7 @@ leaflet(optrop) %>%
     title="Bottom depth  (m)")
 ```
 
-Highlight one year.
+## Highlight one year.
 
 ```{r}
 facpal <- colorFactor(c("blue", "orange"), NULL)
@@ -140,7 +158,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat, color=~facpal(year==2010))
 ```
 
-Provide a toggle for that one year.
+## Provide a toggle for that one year.
 
 ```{r}
 leaflet(optrop) %>% 
@@ -153,16 +171,15 @@ leaflet(optrop) %>%
     options=layersControlOptions(collapsed=FALSE))
 ```
 
-Show the opid when you click on a point.
+## Show the opid when you click on a point.
 
 ```{r}
-library(htmltools)
 leaflet(optrop) %>% 
   addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, popup=~htmlEscape(as.character(opid)))
+  addCircleMarkers(lng=~long, lat=~lat, popup=~as.character(opid))
 ```
 
-Use a different background map.
+## Use a different background map.
 
 ```{r}
 leaflet(optrop) %>% 
@@ -186,31 +203,31 @@ library(d3heatmap)
 d3heatmap(pd)
 ```
 
-Increase size.
+## Increase size.
 
 ```{r}
 d3heatmap(pd, width=900, height=600)
 ```
 
-Increase font size.
+## Increase font size.
 
 ```{r}
 d3heatmap(pd, cexRow=2, cexCol=2)
 ```
 
-Change colors.
+## Change colors.
 
 ```{r}
 d3heatmap(pd, colors="Blues")
 ```
 
-Change column order.
+## Change column order.
 
 ```{r}
 d3heatmap(pd, Colv=FALSE)
 ```
 
-Change row order.
+## Change row order.
 
 ```{r}
 d3heatmap(pd, Rowv=FALSE)
