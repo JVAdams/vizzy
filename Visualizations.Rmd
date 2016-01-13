@@ -21,21 +21,26 @@ tabcount <- 1
 figcount <- 1
 ```
 
-This presentation is available at my GitHub site, in the **vizzy** repository, **https://github.com/JVAdams/vizzy**.
 
 
 
 # HTML widgets for R
 
-HTML widgets produce interactive web visualizations. 
+## HTML widgets produce interactive web visualizations. 
 
 A few lines of R code is all it takes. 
 
-* Data tables - Tabular data display   
-* Leaflet - Geo-spatial mapping  
-* D3 heatmap - Interactive heatmaps with D3  
+I will walk through some examples of:
 
-What you need
+* Data table - interactive tabular data display   
+* Leaflet - interactive geo-spatial mapping  
+* D3 heatmap - interactive heatmap (bivariate grouping)  
+
+This presentation is available at my GitHub site, in the **vizzy** repository,
+
+** https://github.com/JVAdams/vizzy **
+
+## What you need:
 
  * R - [download](https://cran.r-project.org/bin/windows/base/R-3.2.3-win.exe) and install
  * Packages - install
@@ -59,9 +64,7 @@ I will use historical data from the Lake Huron bottom trawl survey to demonstrat
 ```{r, echo=FALSE}
 setwd("C:/JVA/GitHub/vizzy")
 datadir <- "C:/JVA/Lakes Vessels/Huron/2012/"
-```
 
-```{r}
 op <- read.csv(paste0(datadir, "HURON_OP.csv"), as.is=TRUE, 
   col.names=c("opid", "year", "vessel", "serial", "lake", "port", "cruise", 
     "opdate", "time", "lat", "long", "surftemp", "weather", "windspeed", 
@@ -69,10 +72,11 @@ op <- read.csv(paste0(datadir, "HURON_OP.csv"), as.is=TRUE,
 numvars <- c("lat", "long", "surftemp", "weather", "windspeed", "seacond", 
   "winddirect", "distance")
 op[, numvars] <- apply(op[, numvars], 2, as.numeric)
-fixcoord <- function(ddmm.) {
+fixcoord <- function(ddmm., r=4) {
   dd <- floor(ddmm./100)
   mm. <- ddmm. - 100*dd
   dd. <- dd + mm./60
+  round(dd., r)
   return(dd.)
 }
 op$long <- -fixcoord(op$long)
@@ -85,21 +89,38 @@ trop <- read.csv(paste0(datadir, "HURON_TROP.csv"), as.is=TRUE,
   col.names=c("opid", "towtime", "fishtemp", "depth", "trdesign"))
 trop$fishtemp <- as.numeric(trop$fishtemp)
 
-optrop <- merge(op, trop)
-optrop$portf <- as.factor(optrop$port)
+optrop <- merge(op, trop[, c("opid", "towtime", "fishtemp", "depth")])
 
 cat <- read.csv(paste0(datadir, "HURON_TRCATCH.csv"), as.is=TRUE, 
   col.names=c("opid", "stage", "species", "n", "weight", "lfn"))
 numvars <- c("stage", "weight", "lfn")
 cat[, numvars] <- apply(cat[, numvars], 2, as.numeric)
-bigcat <- merge(optrop, cat)
+optrcat <- merge(optrop, cat)
+
+save(optrop, optrcat, file="Huron0610.RData")
+rm(list = ls(name = ".GlobalEnv"), pos = ".GlobalEnv")
+```
+
+If you wish to try out the examples I am demonstrating today, download the data from my GitHub site using the commands below.  You will see that the file contains two objects: the bottom trawl operations data, **optrop**, and catch data, **optrcat**.
+
+```{r}
+huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+load(url(huron.url), verbose=TRUE)
 ```
 
 
 
-# **DataTables** - Tabular data display  
+# Data tables - Tabular data display  
 
-**DataTables** displays R matrices or data frames as interactive HTML tables that support filtering, pagination, and sorting.
+Data table display R matrices or data frames as interactive HTML tables that support filtering, pagination, and sorting.
+
+Let's take a look at the bottom trawl operations data.
+
+```{r}
+library(DT)
+datatable(optrop)
+```
+
 
 ```{r}
 library(DT)
@@ -195,7 +216,7 @@ leaflet(optrop) %>%
 Interactive heatmaps with D3 including support for row/column highlighting and zooming.
 
 ```{r}
-pd <- with(bigcat, tapply(n, list(port + depth/1000, species), mean))
+pd <- with(optrcat, tapply(n, list(port + depth/1000, species), mean))
 pd[is.na(pd)] <- 0
 pd <- sqrt(pd)
 
