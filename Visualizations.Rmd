@@ -5,8 +5,8 @@ date: "13 Jan 2016"
 output:
   html_document:
     toc: TRUE
-    toc_depth: 1
-    number_sections: true
+    toc_depth: 2
+    number_sections: false
     theme: cerulean
     highlight: tango
 subtitle: USGS-GLSC All Hands Meeting
@@ -23,43 +23,40 @@ figcount <- 1
 
 
 
-
 # HTML widgets for R
 
-## HTML widgets produce interactive web visualizations. 
+## HTML widgets produce interactive web visualizations
 
 A few lines of R code is all it takes. 
 
 I will walk through some examples of:
 
 * Data table - interactive tabular data display   
+* Heatmap - interactive heatmap (bivariate grouping)  
 * Leaflet - interactive geo-spatial mapping  
-* D3 heatmap - interactive heatmap (bivariate grouping)  
 
 This presentation is available at my GitHub site, in the **vizzy** repository,
 
-** https://github.com/JVAdams/vizzy **
+ * [**github.com / JVAdams / vizzy**](https://github.com/JVAdams/vizzy)
 
 ## What you need:
 
- * R - [download](https://cran.r-project.org/bin/windows/base/R-3.2.3-win.exe) and install
- * Packages - install
+* [Download](https://cran.r-project.org/bin/windows/base/R-3.2.3-win.exe) and install R
+* Install packages
 
 ```{r, eval=FALSE}
 install.packages(c(
   "DT",
-  "leaflet",
-  "d3heatmap"
+  "d3heatmap",
+  "leaflet"
 )
 ```
-
-For more information, visit the HTML widgets [showcase](http://www.htmlwidgets.org/showcase_leaflet.html).
 
 
 
 # Read in the data
 
-I will use historical data from the Lake Huron bottom trawl survey to demonstrate the capabilities of HTML widgets for R.
+I will use a subset of five years of data from the Lake Huron bottom trawl survey to demonstrate the capabilities of HTML widgets for R.
 
 ```{r, echo=FALSE}
 setwd("C:/JVA/GitHub/vizzy")
@@ -72,11 +69,11 @@ op <- read.csv(paste0(datadir, "HURON_OP.csv"), as.is=TRUE,
 numvars <- c("lat", "long", "surftemp", "weather", "windspeed", "seacond", 
   "winddirect", "distance")
 op[, numvars] <- apply(op[, numvars], 2, as.numeric)
-fixcoord <- function(ddmm., r=4) {
+fixcoord <- function(ddmm., rnd=4) {
   dd <- floor(ddmm./100)
   mm. <- ddmm. - 100*dd
   dd. <- dd + mm./60
-  round(dd., r)
+  dd. <- round(dd., rnd)
   return(dd.)
 }
 op$long <- -fixcoord(op$long)
@@ -110,31 +107,129 @@ load(url(huron.url), verbose=TRUE)
 
 
 
-# Data tables - Tabular data display  
+# Data table - tabular data display  
 
-Data table display R matrices or data frames as interactive HTML tables that support filtering, pagination, and sorting.
+The `datatable()` function from the **DT** package displays a data frame as an interactive HTML table.  
 
-Let's take a look at the bottom trawl operations data.
+Let's take a look at the bottom trawl operations data, using the defaults.
+
+From this display, we can 
+
+* change the number of entries displayed,
+* sort by a column,
+* search for a value, and
+* page through the data.
 
 ```{r}
 library(DT)
 datatable(optrop)
 ```
 
+## Reduce the number of rows displayed
 
 ```{r}
-library(DT)
-selvars <- c("opid", "year", "vessel", "cruise", "serial", "port", "opdate", 
-  "fishtemp", "depth")
-datatable(optrop[, selvars], options=list(pageLength=5), rownames=FALSE, 
-  caption="Example DataTables", filter="top")
+datatable(optrop, options=list(pageLength=5))
+```
+
+## Remove the row names
+
+```{r}
+datatable(optrop, rownames=FALSE)
+```
+
+## Show a subset of columns
+
+```{r}
+datatable(optrop[ , c("opid", "opdate", "depth", "fishtemp")])
+```
+
+## Add a caption
+
+```{r}
+datatable(optrop, caption="Lake Huron bottom trawl operations")
+```
+
+## Add the ability to filter
+
+For example, we can use the filter to look at the subset of data from port 308 in year 2008.
+
+```{r}
+datatable(optrop, filter="top")
 ```
 
 
 
-# **Leaflet** - Geo-spatial mapping  
+# Heatmap - interactive heatmap
 
-**Leaflet** is a JavaScript library for creating dynamic maps that support panning and zooming along with various annotations like markers, polygons, and popups.
+The `d3heatmap()` function from the **d3heatmap** package displays a heatmap with support for row and column highlighting and zooming.
+
+First, we'll create a matrix of the average number of fish captured per operation by port-depth (in rows) and species (in columns).  If a given species was not captured at a given port and depth, We'll set its total to zero.
+
+```{r}
+totcat <- with(optrcat, tapply(n, list(paste(port, format(depth)), species), mean))
+totcat[is.na(totcat)] <- 0
+datatable(round(totcat))
+```
+
+Then we'll make a heatmap from this matrix, using the defaults.
+
+```{r}
+library(d3heatmap)
+d3heatmap(totcat)
+```
+
+The results are so skewed, only a few of the species are distinguishable from the rest.  Let's square root transform them.
+
+Let's take a closer look.  You can see that the species columns and the port-depth rows have been re-ordered according to some default clustering algorithm.  The dendrograms are visible on the left side and top of the heatmap.  You can hover over a cell to find out what its row, column, and value are.  You can also zoom in on a selected set of cells.
+
+```{r}
+sqrttotcat <- sqrt(totcat)
+d3heatmap(sqrttotcat)
+```
+
+## Make it smaller
+
+```{r}
+d3heatmap(sqrttotcat, width=400, height=300)
+```
+
+## Increase font size
+
+```{r}
+d3heatmap(sqrttotcat, cexRow=2, cexCol=2)
+```
+
+## Change colors
+
+```{r}
+d3heatmap(sqrttotcat, colors="Blues")
+```
+
+## Keep the original column order
+
+```{r}
+d3heatmap(sqrttotcat, Colv=FALSE)
+```
+
+## Keep the original row order
+
+```{r}
+d3heatmap(sqrttotcat, Rowv=FALSE)
+```
+
+
+
+# Leaflet - geo-spatial mapping  
+
+Leaflet creates a dynamic map that supports panning and zooming.
+
+Let's map the Lake Huron bottom trawl operations data, using the defaults.
+
+The code that I'm using here makes use of a **piping** operator, **%>%**.  This operator essentially chains together a bunch of operations on a single object.  It's handy here, because the **leaflet** package builds a single map from a collection of separate commands.
+
+After loading the package, the first line uses the **leaflet()** function to idenitify the data source.  The second line uses the **addTiles()** function to create the background map image.  The third line uses the **addCircleMarkers()** function to add markers to the map at the location of bottom trawl operations.
+
+We can pan and zoom our way around this map.
 
 ```{r}
 library(leaflet)
@@ -143,15 +238,17 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
 
-## Make the map bigger.
+## Make the map smaller
 
 ```{r}
-leaflet(optrop, width=1000, height=600) %>% 
+leaflet(optrop, width=500, height=300) %>% 
   addTiles() %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
 
-## Color the symbols by depth.
+## Color the symbols by depth
+
+In order to use different colors, we need to define a color palette.  In this case, we defined a palette of different shades of blue, corresponding to the bottom depth at each location. 
 
 ```{r}
 numpal <- colorNumeric("Blues", NULL)
@@ -160,7 +257,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth))
 ```
 
-## Add a legend.
+## Add a legend
 
 ```{r}
 leaflet(optrop) %>% 
@@ -170,7 +267,7 @@ leaflet(optrop) %>%
     title="Bottom depth  (m)")
 ```
 
-## Highlight one year.
+## Highlight one year
 
 ```{r}
 facpal <- colorFactor(c("blue", "orange"), NULL)
@@ -179,7 +276,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat, color=~facpal(year==2010))
 ```
 
-## Provide a toggle for that one year.
+## Provide a toggle for that one year
 
 ```{r}
 leaflet(optrop) %>% 
@@ -192,7 +289,7 @@ leaflet(optrop) %>%
     options=layersControlOptions(collapsed=FALSE))
 ```
 
-## Show the opid when you click on a point.
+## Show the opid when you click on a point
 
 ```{r}
 leaflet(optrop) %>% 
@@ -200,7 +297,7 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat, popup=~as.character(opid))
 ```
 
-## Use a different background map.
+## Use a different background map
 
 ```{r}
 leaflet(optrop) %>% 
@@ -208,50 +305,13 @@ leaflet(optrop) %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
 
+# Summary
 
+We've looked at examples of the HTML widgets that I thought would be of the most use to you.
 
+* Data table - interactive tabular data display   
+* Heatmap - interactive heatmap (colorized table)  
+* Leaflet - interactive geo-spatial mapping  
 
-# d3heatmap - Interactive heatmaps with D3  
-
-Interactive heatmaps with D3 including support for row/column highlighting and zooming.
-
-```{r}
-pd <- with(optrcat, tapply(n, list(port + depth/1000, species), mean))
-pd[is.na(pd)] <- 0
-pd <- sqrt(pd)
-
-library(d3heatmap)
-d3heatmap(pd)
-```
-
-## Increase size.
-
-```{r}
-d3heatmap(pd, width=900, height=600)
-```
-
-## Increase font size.
-
-```{r}
-d3heatmap(pd, cexRow=2, cexCol=2)
-```
-
-## Change colors.
-
-```{r}
-d3heatmap(pd, colors="Blues")
-```
-
-## Change column order.
-
-```{r}
-d3heatmap(pd, Colv=FALSE)
-```
-
-## Change row order.
-
-```{r}
-d3heatmap(pd, Rowv=FALSE)
-```
-
+There are other HTML widgets available, too.  For more information, visit the HTML widgets [showcase](http://www.htmlwidgets.org/showcase_leaflet.html).
 
