@@ -73,6 +73,18 @@ I will use a subset of five years of data from the Lake Huron bottom trawl surve
 setwd("C:/JVA/GitHub/vizzy")
 datadir <- "C:/JVA/Lakes Vessels/Huron/2012/"
 
+
+sn <- read.csv(paste0(datadir, "Species.csv"), as.is=TRUE, 
+  col.names=c("species", "spname", "sciname"))
+# get rid of trailing white space
+sn$spname <- gsub("^[ \t]+|[ \t]+$", "", sn$spname)
+sn <- sn[, c("species", "spname")]
+
+
+pn <- read.csv(paste0(datadir, "HuronPortNames.csv"), as.is=TRUE, 
+  col.names=c("port", "pname"))
+
+
 op <- read.csv(paste0(datadir, "HURON_OP.csv"), as.is=TRUE, 
   col.names=c("opid", "year", "vessel", "serial", "lake", "port", "cruise", 
     "opdate", "time", "lat", "long", "surftemp", "weather", "windspeed", 
@@ -90,8 +102,12 @@ fixcoord <- function(ddmm., rnd=4) {
 op$long <- -fixcoord(op$long)
 op$lat <- fixcoord(op$lat)
 op$opdate <- as.Date(op$opdate, "%d-%b-%y")
+op$port <- as.factor(op$port)
+op <- merge(op, pn)
 sel <- !apply(is.na(op[, c("lat", "long")]), 1, any) & op$year %in% 2006:2010
-op <- op[sel, c("opid", "year", "vessel", "cruise", "serial", "port", "opdate", "time", "lat", "long", "surftemp")]
+op <- op[sel, c("opid", "year", "vessel", "cruise", "serial", "port", "pname", 
+  "opdate", "time", "lat", "long", "surftemp")]
+
 
 trop <- read.csv(paste0(datadir, "HURON_TROP.csv"), as.is=TRUE, 
   col.names=c("opid", "towtime", "fishtemp", "depth", "trdesign"))
@@ -99,6 +115,7 @@ trop$fishtemp <- as.numeric(trop$fishtemp)
 
 optrop <- merge(op, trop[, c("opid", "towtime", "fishtemp", "depth")])
 optrop$depth[with(optrop, depth > 60 & depth < 70)] <- 64
+
 
 cat <- read.csv(paste0(datadir, "HURON_TRCATCH.csv"), as.is=TRUE, 
   col.names=c("opid", "stage", "species", "n", "weight", "lfn"))
@@ -108,6 +125,12 @@ optrcat <- merge(optrop, cat)
 optrcat <- optrcat[optrcat$species %in% 
     c("106", "108", "109", "130", "131", "133", "203", "204", "212", "307", 
       "5", "504", "508", "801", "803", "904", "910"), ]
+optrcat <- merge(optrcat, sn)
+optrcat$species <- as.factor(optrcat$species)
+optrcat <- optrcat[, c("opid", "year", "port", "pname", "opdate", "lat", 
+  "long", "towtime", "fishtemp", "depth", "species", "spname", "stage", "n", 
+  "weight", "lfn")]
+optrcat <- optrcat[with(optrcat, order(year, opdate, opid)), ]
 
 save(optrop, optrcat, file="Huron0610.RData")
 rm(list = ls(name = ".GlobalEnv"), pos = ".GlobalEnv")
@@ -219,14 +242,14 @@ streamgraph(data=meannum, key="species", date="year", value="n",
   width=400, height=200)
 ```
 
-## Change the way the areas are stacked: fill the vertical range (from 0 to 100%)
+## Show as proportions (from 0 to 100%)
 
 ```{r}
 streamgraph(data=meannum, key="species", date="year", value="n",
   offset="expand")
 ```
 
-## Change the way the areas are stacked: use a zero baseline.
+## Use a zero baseline
 
 ```{r}
 streamgraph(data=meannum, key="species", date="year", value="n",
@@ -245,14 +268,6 @@ streamgraph(data=meannum, key="species", date="year", value="n",
 ```{r}
 streamgraph(data=meannum, key="species", date="year", value="n",
   interpolate="step")
-```
-
-## Plot the mean number vs. depth (instead of year)
-
-```{r}
-meannum <- aggregate(n ~ depth + species, data=optrcat, FUN=mean)
-streamgraph(data=meannum, key="species", date="depth", value="n",
-  scale="continuous")
 ```
 
 
@@ -343,13 +358,17 @@ Let's map the Lake Huron bottom trawl operations data, using the defaults.
 
 The code that I'm using here makes use of a **piping** operator, **%>%**.  This operator essentially chains together a bunch of operations on a single object.  It's handy to use in this case, because the **leaflet** package builds a single map from a collection of separate commands.
 
-After loading the package, the first line uses the `leaflet()` function to identify the data source.  The second line uses the `addTiles()` function to create the background map image.  The third line uses the `addCircleMarkers()` function to add markers to the map at the location of bottom trawl operations.
+After loading the package, 
+
+* the `leaflet()` function identifies the data source,
+* the `addTiles()` function creates the background map image, and
+* the `addCircleMarkers()` function adds markers to the map.
 
 ```{r, eval=FALSE}
 library(leaflet)
 leaflet(optrop) %>% 
   addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat)
+  addMarkers(lng=~long, lat=~lat)
 ```
 
 We can pan and zoom our way around this map.
@@ -358,7 +377,7 @@ We can pan and zoom our way around this map.
 library(leaflet)
 leaflet(optrop) %>% 
   addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat)
+  addMarkers(lng=~long, lat=~lat)
 ```
 
 ## Make the map smaller
@@ -366,7 +385,7 @@ leaflet(optrop) %>%
 ```{r}
 leaflet(optrop, width=500, height=300) %>% 
   addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat)
+  addMarkers(lng=~long, lat=~lat)
 ```
 
 ## Color the symbols by depth
@@ -382,12 +401,25 @@ leaflet(optrop) %>%
 
 ## Add a legend
 
+Ordinarily, you don't need the `className` argument to the `addLegend()` function.  I include it here simply to avoid clashes with the heatmaps.
+
 ```{r}
 leaflet(optrop) %>% 
   addTiles() %>%
   addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
-  addLegend("bottomleft", pal=numpal, values=~depth, opacity=1,
-    title="Bottom depth  (m)", className="legendbox")
+  addLegend(pal=numpal, values=~depth, className="legendbox")
+```
+
+## Refine the legend
+
+Change the position and transparency of the legend, and add a title.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
+  addLegend(pal=numpal, values=~depth, className="legendbox",
+    position="bottomleft", opacity=1, title="Bottom depth  (m)")
 ```
 
 ## Highlight one year
@@ -427,6 +459,14 @@ leaflet(optrop) %>%
   addProviderTiles("CartoDB.Positron") %>%
   addCircleMarkers(lng=~long, lat=~lat)
 ```
+
+```{r}
+leaflet(optrop) %>% 
+  addProviderTiles("Stamen.Watercolor") %>%
+  addCircleMarkers(lng=~long, lat=~lat)
+```
+
+
 
 # Summary
 
