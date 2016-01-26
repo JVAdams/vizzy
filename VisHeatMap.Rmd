@@ -1,0 +1,97 @@
+---
+title: "Heatmap - interactive heatmap"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r, echo=FALSE}
+huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+load(url(huron.url))
+```
+
+The `d3heatmap()` function from the **d3heatmap** package displays a heatmap with support for row and column highlighting and zooming.
+
+First, we'll create a matrix of the average number of fish captured per operation by port-depth (in rows) and species (in columns).  If a given species was not captured at a given port and depth, We'll set its total to zero.
+
+```{r}
+totcat <- with(optrcat, 
+  tapply(n, list(paste(port, format(depth)), species), mean))
+totcat[is.na(totcat)] <- 0
+```
+
+Let's take a look at the matrix we created.
+
+```{r}
+library(DT)
+datatable(totcat)
+```
+
+Now, let's make a heatmap from this matrix, using the defaults.
+
+```{r, eval=FALSE}
+library(d3heatmap)
+d3heatmap(totcat)
+```
+
+The results are so skewed, only a few of the species are distinguishable from the rest.  
+
+```{r, echo=FALSE}
+library(d3heatmap)
+d3heatmap(totcat)
+```
+
+Let's square root transform them.
+
+```{r, eval=FALSE}
+sqrttotcat <- sqrt(totcat)
+d3heatmap(sqrttotcat)
+```
+
+You can see that the species columns and the port-depth rows have been re-ordered according to some default clustering algorithm.  The dendrograms are visible on the left side and top of the heatmap.  You can hover over a cell to find out what its row, column, and value are.  You can also zoom in on a selected set of cells.
+
+```{r, echo=FALSE}
+sqrttotcat <- sqrt(totcat)
+d3heatmap(sqrttotcat)
+```
+
+# Make it smaller
+
+```{r}
+d3heatmap(sqrttotcat, width=400, height=300)
+```
+
+# Increase font size
+
+```{r}
+d3heatmap(sqrttotcat, cexRow=2, cexCol=2)
+```
+
+# Change colors
+
+```{r}
+d3heatmap(sqrttotcat, colors="Blues")
+```
+
+# Keep the original column order
+
+```{r}
+d3heatmap(sqrttotcat, Colv=FALSE)
+```
+
+# Keep the original row order
+
+```{r}
+d3heatmap(sqrttotcat, Rowv=FALSE)
+```
+
+# Return to [main page](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)

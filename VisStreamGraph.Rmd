@@ -1,0 +1,95 @@
+---
+title: "Streamgraph - interactive stacked area plot"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r, echo=FALSE}
+huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+load(url(huron.url))
+```
+
+The `streamgraph()` function from the **streamgraph** package displays an interactive stacked area plot.
+
+First, we'll create a data frame of the average number of fish captured per operation by year and species name.
+
+```{r}
+meannum <- aggregate(n ~ spname + year, data=optrcat, FUN=mean)
+```
+
+Let's take a look at the data frame we created.
+
+```{r}
+library(DT)
+datatable(meannum)
+```
+
+Then we'll make a streamgraph from this data frame, using the defaults.  The arguments specify the data frame `data`, the category for the areas `key`, and the quantities for the x- `date` and y-axes `value`.
+
+```{r}
+library(streamgraph)
+streamgraph(data=meannum, key="spname", date="year", value="n")
+```
+
+# Fix the x-axis
+
+Change the tick interval to 1 year.  
+
+The code that I'm using here makes use of a **piping** operator, **%>%**.  This operator essentially chains together a bunch of operations on a single object.  It's handy to use in this case, because the **streamgraph** package builds a single figure from a collection of separate functions.
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n") %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Make the image smaller
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n",
+  width=400, height=200) %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Show as proportions (from 0 to 100%)
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n",
+  offset="expand") %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Use a zero baseline
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n",
+  offset="zero") %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Draw unsmoothed lines
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n",
+  interpolate="linear") %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Draw rectangles
+
+```{r}
+streamgraph(data=meannum, key="spname", date="year", value="n",
+  interpolate="step") %>%
+  sg_axis_x(1, "year", "%Y")
+```
+
+# Return to [main page](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)

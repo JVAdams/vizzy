@@ -1,7 +1,7 @@
 ---
 title: "Recent Advances in Interactive Visualizations in R"
 author: "Jean V. Adams"
-date: "13 Jan 2016"
+date: "26 Jan 2016"
 output:
   html_document:
     toc: TRUE
@@ -15,17 +15,13 @@ subtitle: USGS-GLSC All Hands Meeting
 ```{r setup, echo=FALSE} 
 library(knitr) 
 opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
-
-# define two variables to keep track of Table and Figure numbers
-tabcount <- 1
-figcount <- 1
 ```
 
 
 
 # HTML widgets for R
 
-## HTML widgets produce interactive web visualizations
+HTML widgets produce interactive web visualizations
 
 A few lines of R code is all it takes. 
 
@@ -40,7 +36,9 @@ This presentation and all the code is available at my GitHub site, in the **vizz
 
  * [**GitHub.com / JVAdams / vizzy**](https://github.com/JVAdams/vizzy)
 
-## What you need
+
+
+# What you need
 
 * [Download](https://cran.r-project.org/bin/windows/base/R-3.2.3-win.exe) and install R
 * Install packages
@@ -149,322 +147,11 @@ The file contains two objects: the bottom trawl operations data, **optrop**, and
 
 # Data table - tabular data display  
 
-The `datatable()` function from the **DT** package displays a data frame as an interactive table.  
-
-Let's take a look at the bottom trawl operations data, using the defaults.
-
-```{r, eval=FALSE}
-library(DT)
-datatable(optrop)
-```
-
-From this display, we can 
-
-* change the number of entries displayed,
-* sort by a column,
-* search for a value, and
-* page through the data.
-
-```{r, echo=FALSE}
-library(DT)
-datatable(optrop)
-```
-
-## Reduce the number of rows displayed
-
-```{r}
-datatable(optrop, options=list(pageLength=5))
-```
-
-## Remove the row names
-
-```{r}
-datatable(optrop, rownames=FALSE)
-```
-
-## Show a subset of columns
-
-```{r}
-datatable(optrop[ , c("opid", "opdate", "depth", "fishtemp")])
-```
-
-## Add a caption
-
-```{r}
-datatable(optrop, caption="Lake Huron bottom trawl operations")
-```
-
-## Add the ability to filter
-
-* Range sliders - numeric columns
-* Select lists - factor (categorical) columns
-* text input boxes - character columns
-
-```{r, eval=FALSE}
-datatable(optrop, filter="top")
-```
-
-For example, we can use the filter to look at the subset of data from port 308 in year 2008.
-
-```{r, echo=FALSE}
-datatable(optrop, filter="top")
-```
-
-
-
 # Streamgraph - interactive stacked area plot
-
-The `streamgraph()` function from the **streamgraph** package displays an interactive stacked area plot.
-
-First, we'll create a data frame of the average number of fish captured per operation by year and species.
-
-```{r}
-meannum <- aggregate(n ~ year + species, data=optrcat, FUN=mean)
-```
-
-Let's take a look at the data frame we created.
-
-```{r}
-datatable(round(meannum))
-```
-
-Then we'll make a streamgraph from this data frame, using the defaults.  The arguments specify the data frame `data`, the category for the areas `key`, and the quantities for the x- `date` and y-axes `value`.
-
-```{r}
-library(streamgraph)
-streamgraph(data=meannum, key="species", date="year", value="n")
-```
-
-## Make the image smaller
-
-```{r}
-streamgraph(data=meannum, key="species", date="year", value="n",
-  width=400, height=200)
-```
-
-## Show as proportions (from 0 to 100%)
-
-```{r}
-streamgraph(data=meannum, key="species", date="year", value="n",
-  offset="expand")
-```
-
-## Use a zero baseline
-
-```{r}
-streamgraph(data=meannum, key="species", date="year", value="n",
-  offset="zero")
-```
-
-## Draw unsmoothed lines
-
-```{r}
-streamgraph(data=meannum, key="species", date="year", value="n",
-  interpolate="linear")
-```
-
-## Draw rectangles
-
-```{r}
-streamgraph(data=meannum, key="species", date="year", value="n",
-  interpolate="step")
-```
-
-
 
 # Heatmap - interactive heatmap
 
-The `d3heatmap()` function from the **d3heatmap** package displays a heatmap with support for row and column highlighting and zooming.
-
-First, we'll create a matrix of the average number of fish captured per operation by port-depth (in rows) and species (in columns).  If a given species was not captured at a given port and depth, We'll set its total to zero.
-
-```{r}
-totcat <- with(optrcat, 
-  tapply(n, list(paste(port, format(depth)), species), mean))
-totcat[is.na(totcat)] <- 0
-```
-
-Let's take a look at the matrix we created.
-
-```{r}
-datatable(round(totcat))
-```
-
-Now, let's make a heatmap from this matrix, using the defaults.
-
-```{r, eval=FALSE}
-library(d3heatmap)
-d3heatmap(totcat)
-```
-
-The results are so skewed, only a few of the species are distinguishable from the rest.  
-
-```{r, echo=FALSE}
-library(d3heatmap)
-d3heatmap(totcat)
-```
-
-Let's square root transform them.
-
-```{r, eval=FALSE}
-sqrttotcat <- sqrt(totcat)
-d3heatmap(sqrttotcat)
-```
-
-You can see that the species columns and the port-depth rows have been re-ordered according to some default clustering algorithm.  The dendrograms are visible on the left side and top of the heatmap.  You can hover over a cell to find out what its row, column, and value are.  You can also zoom in on a selected set of cells.
-
-```{r, echo=FALSE}
-sqrttotcat <- sqrt(totcat)
-d3heatmap(sqrttotcat)
-```
-
-## Make it smaller
-
-```{r}
-d3heatmap(sqrttotcat, width=400, height=300)
-```
-
-## Increase font size
-
-```{r}
-d3heatmap(sqrttotcat, cexRow=2, cexCol=2)
-```
-
-## Change colors
-
-```{r}
-d3heatmap(sqrttotcat, colors="Blues")
-```
-
-## Keep the original column order
-
-```{r}
-d3heatmap(sqrttotcat, Colv=FALSE)
-```
-
-## Keep the original row order
-
-```{r}
-d3heatmap(sqrttotcat, Rowv=FALSE)
-```
-
-
-
 # Leaflet - geo-spatial mapping  
-
-Leaflet creates a dynamic map that supports panning and zooming.
-
-Let's map the Lake Huron bottom trawl operations data, using the defaults.
-
-The code that I'm using here makes use of a **piping** operator, **%>%**.  This operator essentially chains together a bunch of operations on a single object.  It's handy to use in this case, because the **leaflet** package builds a single map from a collection of separate commands.
-
-After loading the package, 
-
-* the `leaflet()` function identifies the data source,
-* the `addTiles()` function creates the background map image, and
-* the `addCircleMarkers()` function adds markers to the map.
-
-```{r, eval=FALSE}
-library(leaflet)
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addMarkers(lng=~long, lat=~lat)
-```
-
-We can pan and zoom our way around this map.
-
-```{r, echo=FALSE}
-library(leaflet)
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addMarkers(lng=~long, lat=~lat)
-```
-
-## Make the map smaller
-
-```{r}
-leaflet(optrop, width=500, height=300) %>% 
-  addTiles() %>%
-  addMarkers(lng=~long, lat=~lat)
-```
-
-## Color the symbols by depth
-
-In order to use different colors, we need to define a color palette.  In this case, we defined a palette of different shades of blue, corresponding to the bottom depth at each location. 
-
-```{r}
-numpal <- colorNumeric("Blues", NULL)
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth))
-```
-
-## Add a legend
-
-Ordinarily, you don't need the `className` argument to the `addLegend()` function.  I include it here simply to avoid clashes with the heatmaps.
-
-```{r}
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
-  addLegend(pal=numpal, values=~depth, className="legendbox")
-```
-
-## Refine the legend
-
-Change the position and transparency of the legend, and add a title.
-
-```{r}
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
-  addLegend(pal=numpal, values=~depth, className="legendbox",
-    position="bottomleft", opacity=1, title="Bottom depth  (m)")
-```
-
-## Highlight one year
-
-```{r}
-facpal <- colorFactor(c("blue", "orange"), NULL)
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, color=~facpal(year==2010))
-```
-
-## Provide a toggle for that one year
-
-```{r}
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long[year!=2010], lat=~lat[year!=2010], 
-    group="2006-2009") %>% 
-  addCircleMarkers(lng=~long[year==2010], lat=~lat[year==2010], 
-    group="2010") %>%   
-  addLayersControl(overlayGroups=c("2006-2009", "2010"),
-    options=layersControlOptions(collapsed=FALSE))
-```
-
-## Show the opid when you click on a point
-
-```{r}
-leaflet(optrop) %>% 
-  addTiles() %>%
-  addCircleMarkers(lng=~long, lat=~lat, popup=~as.character(opid))
-```
-
-## Use a different background map
-
-```{r}
-leaflet(optrop) %>% 
-  addProviderTiles("CartoDB.Positron") %>%
-  addCircleMarkers(lng=~long, lat=~lat)
-```
-
-```{r}
-leaflet(optrop) %>% 
-  addProviderTiles("Stamen.Watercolor") %>%
-  addCircleMarkers(lng=~long, lat=~lat)
-```
 
 
 

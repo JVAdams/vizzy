@@ -1,0 +1,83 @@
+---
+title: "Data table - tabular data display"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r, echo=FALSE}
+huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+load(url(huron.url))
+```
+
+The `datatable()` function from the **DT** package displays a data frame as an interactive table.  
+
+Let's take a look at the bottom trawl operations data, using the defaults.
+
+```{r, eval=FALSE}
+library(DT)
+datatable(optrop)
+```
+
+From this display, we can 
+
+* change the number of entries displayed,
+* sort by a column,
+* search for a value, and
+* page through the data.
+
+```{r, echo=FALSE}
+library(DT)
+datatable(optrop)
+```
+
+# Reduce the number of rows displayed
+
+```{r}
+datatable(optrop, options=list(pageLength=5))
+```
+
+# Remove the row names
+
+```{r}
+datatable(optrop, rownames=FALSE)
+```
+
+# Show a subset of columns
+
+```{r}
+datatable(optrop[ , c("opid", "opdate", "depth", "fishtemp")])
+```
+
+# Add a caption
+
+```{r}
+datatable(optrop, caption="Lake Huron bottom trawl operations")
+```
+
+# Add the ability to filter
+
+* Range sliders - numeric columns
+* Select lists - factor (categorical) columns
+* text input boxes - character columns
+
+```{r, eval=FALSE}
+datatable(optrop, filter="top")
+```
+
+For example, we can use the filter to look at the subset of data from years 2008-2009, port 308.  Or you could search by port name instead of port code.
+
+```{r, echo=FALSE}
+datatable(optrop, filter="top")
+```
+
+# Return to [main page](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)

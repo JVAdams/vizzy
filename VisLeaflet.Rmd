@@ -1,0 +1,151 @@
+---
+title: "Leaflet - geo-spatial mapping"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+```{r, echo=FALSE}
+huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+load(url(huron.url))
+```
+
+Leaflet creates a dynamic map that supports panning and zooming.
+
+Let's map the Lake Huron bottom trawl operations data, using the defaults.
+
+The code that I'm using here makes use of a **piping** operator, **%>%**.  This operator essentially chains together a bunch of operations on a single object.  It's handy to use in this case, because the **leaflet** package builds a single map from a collection of separate functions.
+
+After loading the package, 
+
+* the `leaflet()` function identifies the data source,
+* the `addTiles()` function creates the background map image, and
+* the `addCircleMarkers()` function adds markers to the map.
+
+```{r, eval=FALSE}
+library(leaflet)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addMarkers(lng=~long, lat=~lat)
+```
+
+We can pan and zoom our way around this map.
+
+```{r, echo=FALSE}
+library(leaflet)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addMarkers(lng=~long, lat=~lat)
+```
+
+# Make the map smaller
+
+```{r}
+leaflet(optrop, width=500, height=300) %>% 
+  addTiles() %>%
+  addMarkers(lng=~long, lat=~lat)
+```
+
+
+
+
+```{r}
+leaflet(optrop, width=500, height=300) %>% 
+  addTiles() %>%
+  addMarkers(lng=~long, lat=~lat, group=~year)
+```
+
+
+
+
+
+
+
+# Color the symbols by depth
+
+In order to use different colors, we need to define a color palette.  In this case, we defined a palette of different shades of blue, corresponding to the bottom depth at each location. 
+
+```{r}
+numpal <- colorNumeric("Blues", NULL)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth))
+```
+
+# Add a legend
+
+Ordinarily, you don't need the `className` argument to the `addLegend()` function.  I include it here simply to avoid clashes with the heatmaps.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
+  addLegend(pal=numpal, values=~depth)
+```
+
+# Refine the legend
+
+Change the position and transparency of the legend, and add a title.
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~numpal(depth)) %>%
+  addLegend(pal=numpal, values=~depth,
+    position="bottomleft", opacity=1, title="Bottom depth  (m)")
+```
+
+# Highlight one year
+
+```{r}
+facpal <- colorFactor(c("blue", "orange"), NULL)
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, color=~facpal(year==2010))
+```
+
+# Provide a toggle for that one year
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long[year!=2010], lat=~lat[year!=2010], 
+    group="2006-2009") %>% 
+  addCircleMarkers(lng=~long[year==2010], lat=~lat[year==2010], 
+    group="2010") %>%   
+  addLayersControl(overlayGroups=c("2006-2009", "2010"),
+    options=layersControlOptions(collapsed=FALSE))
+```
+
+# Show the opid when you click on a point
+
+```{r}
+leaflet(optrop) %>% 
+  addTiles() %>%
+  addCircleMarkers(lng=~long, lat=~lat, popup=~as.character(opid))
+```
+
+# Use a different background map
+
+```{r}
+leaflet(optrop) %>% 
+  addProviderTiles("CartoDB.Positron") %>%
+  addCircleMarkers(lng=~long, lat=~lat)
+```
+
+```{r}
+leaflet(optrop) %>% 
+  addProviderTiles("Stamen.Watercolor") %>%
+  addCircleMarkers(lng=~long, lat=~lat)
+```
+
+# Return to [main page](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)
