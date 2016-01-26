@@ -145,13 +145,13 @@ The file contains two objects: the bottom trawl operations data, **optrop**, and
 
 
 
-# Data table - tabular data display  
+# [Data table page](https://rawgit.com/JVAdams/vizzy/master/VisDataTable.html) - interactive tabular data display
 
-# Streamgraph - interactive stacked area plot
+# [Streamgraph page](https://rawgit.com/JVAdams/vizzy/master/VisStreamGraph.html) - interactive stacked area plot
 
-# Heatmap - interactive heatmap
+# [Heatmap page](https://rawgit.com/JVAdams/vizzy/master/VisHeatMap.html) - interactive heatmap
 
-# Leaflet - geo-spatial mapping  
+# [Leaflet page](https://rawgit.com/JVAdams/vizzy/master/VisLeaflet.html) - interactive geo-spatial mapping
 
 
 
