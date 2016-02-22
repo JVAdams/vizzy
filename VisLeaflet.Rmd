@@ -12,14 +12,18 @@ output:
 ```{r setup, echo=FALSE} 
 library(knitr) 
 opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
 ```
 
-```{r, echo=FALSE}
-huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
-load(url(huron.url))
-```
-
-Leaflet creates a dynamic map that supports panning and zooming.
+The `leaflet()` function from the **leaflet** package creates a dynamic map that supports panning and zooming.
 
 Let's map the Lake Huron bottom trawl operations data, using the defaults.
 
@@ -47,29 +51,6 @@ leaflet(optrop) %>%
   addMarkers(lng=~long, lat=~lat)
 ```
 
-# Make the map smaller
-
-```{r}
-leaflet(optrop, width=500, height=300) %>% 
-  addTiles() %>%
-  addMarkers(lng=~long, lat=~lat)
-```
-
-
-
-
-```{r}
-leaflet(optrop, width=500, height=300) %>% 
-  addTiles() %>%
-  addMarkers(lng=~long, lat=~lat, group=~year)
-```
-
-
-
-
-
-
-
 # Color the symbols by depth
 
 In order to use different colors, we need to define a color palette.  In this case, we defined a palette of different shades of blue, corresponding to the bottom depth at each location. 
@@ -82,8 +63,6 @@ leaflet(optrop) %>%
 ```
 
 # Add a legend
-
-Ordinarily, you don't need the `className` argument to the `addLegend()` function.  I include it here simply to avoid clashes with the heatmaps.
 
 ```{r}
 leaflet(optrop) %>% 

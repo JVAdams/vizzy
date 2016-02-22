@@ -12,11 +12,15 @@ output:
 ```{r setup, echo=FALSE} 
 library(knitr) 
 opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
-```
 
-```{r, echo=FALSE}
-huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
-load(url(huron.url))
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
 ```
 
 The `datatable()` function from the **DT** package displays a data frame as an interactive table.  

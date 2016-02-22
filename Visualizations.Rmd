@@ -1,7 +1,7 @@
 ---
 title: "Recent Advances in Interactive Visualizations in R"
 author: "Jean V. Adams"
-date: "26 Jan 2016"
+date: "(last updated 22 Feb 2016)"
 output:
   html_document:
     toc: TRUE
@@ -9,7 +9,7 @@ output:
     number_sections: false
     theme: cerulean
     highlight: tango
-subtitle: USGS-GLSC All Hands Meeting
+subtitle: USGS-GLSC All Hands Meeting - 23 Feb 2016
 ---
 
 ```{r setup, echo=FALSE} 
@@ -28,9 +28,10 @@ A few lines of R code is all it takes.
 I will walk through some examples of:
 
 * Data table - interactive tabular data display   
+* ScatterD3 - interactive scatter plot  
+* Leaflet - interactive geo-spatial mapping  
 * Streamgraph - interactive stacked area plot
 * Heatmap - interactive heatmap (cluster grouping)  
-* Leaflet - interactive geo-spatial mapping  
 
 This presentation and all the code is available at my GitHub site, in the **vizzy** repository,
 
@@ -46,8 +47,9 @@ This presentation and all the code is available at my GitHub site, in the **vizz
 ```{r, eval=FALSE}
 install.packages(c(
   "DT",
-  "d3heatmap",
+  "scatterD3",
   "leaflet",
+  "d3heatmap",
   "devtools"
 )
 devtools::install_github("hrbrmstr/streamgraph")
@@ -136,9 +138,20 @@ rm(list = ls(name = ".GlobalEnv"), pos = ".GlobalEnv")
 
 If you wish to try out the examples I am demonstrating today, download the data from my GitHub site using the commands below.  
 
-```{r}
+```{r, eval=FALSE}
 huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
-load(url(huron.url), verbose=TRUE)
+load(url(huron.url))
+```
+
+```{r, echo=FALSE}
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
 ```
 
 The file contains two objects: the bottom trawl operations data, **optrop**, and catch data, **optrcat**.
@@ -147,11 +160,13 @@ The file contains two objects: the bottom trawl operations data, **optrop**, and
 
 # [Data table page](https://rawgit.com/JVAdams/vizzy/master/VisDataTable.html) - interactive tabular data display
 
+# [ScatterD3 page](https://rawgit.com/JVAdams/vizzy/master/VisScatterD3.html) - interactive scatter plot
+
+# [Leaflet page](https://rawgit.com/JVAdams/vizzy/master/VisLeaflet.html) - interactive geo-spatial mapping
+
 # [Streamgraph page](https://rawgit.com/JVAdams/vizzy/master/VisStreamGraph.html) - interactive stacked area plot
 
 # [Heatmap page](https://rawgit.com/JVAdams/vizzy/master/VisHeatMap.html) - interactive heatmap
-
-# [Leaflet page](https://rawgit.com/JVAdams/vizzy/master/VisLeaflet.html) - interactive geo-spatial mapping
 
 
 
@@ -160,8 +175,9 @@ The file contains two objects: the bottom trawl operations data, **optrop**, and
 We've looked at examples of the HTML widgets that I thought would be of the most use to you.
 
 * Data table - interactive tabular data display   
+* ScatterD3 - interactive scatter plot
+* Leaflet - interactive geo-spatial mapping  
 * Streamgraph - interactive stacked area plot
 * Heatmap - interactive heatmap (cluster grouping)  
-* Leaflet - interactive geo-spatial mapping  
 
 There are other HTML widgets available, too.  For more information, visit the HTML widgets [showcase](http://www.htmlwidgets.org/showcase_leaflet.html).

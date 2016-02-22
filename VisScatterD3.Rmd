@@ -1,0 +1,79 @@
+---
+title: "ScatterD3 - interactive scatter plot"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 2
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
+```
+
+The `scatterD3()` function from the **scatterD3** package displays an interactive scatter plot.
+
+First, let's create a simple scatter plot of fishing depth versus fishing temperature.  I use the `with()` function to refer to the data frame.
+
+We can **zoom** (using the mouse scroll wheel), **pan** (by clicking and dragging), and we can **display** the plotted values (by hovering). 
+
+```{r}
+library(scatterD3)
+with(optrop, scatterD3(depth, fishtemp))
+```
+
+# CAUTION: missing values
+
+`scatterD3()` does weird things with missing values.  Let's create a data frame with no missing values for `fishtemp`.
+
+```{r}
+optrop.sub <- optrop[!is.na(optrop$fishtemp), ]
+
+with(optrop.sub, scatterD3(depth, fishtemp))
+```
+
+# Add text labels
+
+These can be repositioned.
+
+```{r}
+with(optrop.sub, scatterD3(depth, fishtemp, lab=pname))
+```
+
+# Use different colors
+
+```{r}
+with(optrop.sub, scatterD3(depth, fishtemp, col_var=year))
+```
+
+# Use different symbols
+
+```{r}
+with(optrop.sub, scatterD3(depth, fishtemp, symbol_var=cruise))
+```
+
+# Size the symbols
+
+```{r}
+with(optrop.sub, scatterD3(depth, fishtemp, size_var=surftemp))
+```
+
+# Specify text to display on hover
+
+```{r}
+with(optrop.sub, scatterD3(depth, fishtemp, tooltip_text=opid))
+```
+
+# Return to [main page](https://rawgit.com/JVAdams/vizzy/master/Visualizations.html)

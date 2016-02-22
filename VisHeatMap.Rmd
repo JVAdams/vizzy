@@ -12,11 +12,15 @@ output:
 ```{r setup, echo=FALSE} 
 library(knitr) 
 opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
-```
 
-```{r, echo=FALSE}
-huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
-load(url(huron.url))
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
 ```
 
 The `d3heatmap()` function from the **d3heatmap** package displays a heatmap with support for row and column highlighting and zooming.
@@ -62,12 +66,6 @@ You can see that the species columns and the port-depth rows have been re-ordere
 ```{r, echo=FALSE}
 sqrttotcat <- sqrt(totcat)
 d3heatmap(sqrttotcat)
-```
-
-# Make it smaller
-
-```{r}
-d3heatmap(sqrttotcat, width=400, height=300)
 ```
 
 # Increase font size

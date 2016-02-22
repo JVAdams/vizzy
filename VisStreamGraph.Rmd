@@ -12,11 +12,15 @@ output:
 ```{r setup, echo=FALSE} 
 library(knitr) 
 opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
-```
 
-```{r, echo=FALSE}
-huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
-load(url(huron.url))
+internet <- TRUE
+if(internet) {
+  huron.url <- "https://github.com/JVAdams/vizzy/raw/master/Huron0610.RData"
+  load(url(huron.url))
+} else {
+  huron <- "C:/JVA/GitHub/vizzy/Huron0610.RData"
+  load(huron)
+}
 ```
 
 The `streamgraph()` function from the **streamgraph** package displays an interactive stacked area plot.
@@ -52,11 +56,11 @@ streamgraph(data=meannum, key="spname", date="year", value="n") %>%
   sg_axis_x(1, "year", "%Y")
 ```
 
-# Make the image smaller
+# Use a zero baseline
 
 ```{r}
 streamgraph(data=meannum, key="spname", date="year", value="n",
-  width=400, height=200) %>%
+  offset="zero") %>%
   sg_axis_x(1, "year", "%Y")
 ```
 
@@ -65,14 +69,6 @@ streamgraph(data=meannum, key="spname", date="year", value="n",
 ```{r}
 streamgraph(data=meannum, key="spname", date="year", value="n",
   offset="expand") %>%
-  sg_axis_x(1, "year", "%Y")
-```
-
-# Use a zero baseline
-
-```{r}
-streamgraph(data=meannum, key="spname", date="year", value="n",
-  offset="zero") %>%
   sg_axis_x(1, "year", "%Y")
 ```
 
