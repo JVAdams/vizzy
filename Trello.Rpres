@@ -1,5 +1,6 @@
 Trello & Mendeley
 ========================================================
+transition: fade
 ## All Hands Meeting
 ### Jean V. Adams
 ### USGS Great Lakes Science Center
