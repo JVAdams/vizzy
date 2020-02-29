@@ -19,7 +19,7 @@ opts_chunk$set(echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE)
 
 # Purpose
 
-This session will introduce participants to general data wrangling using (tidyverse)[https://www.tidyverse.org/] functions in R, including rearranging, subsetting, and summarizing data using a "piped" workflow.
+This session will introduce participants to general data wrangling using [tidyverse](https://www.tidyverse.org/) functions in R, including rearranging, subsetting, and summarizing data using a "piped" workflow.
 
 This presentation and all the code is available at my GitHub site, in the **vizzy** repository, [**GitHub.com/JVAdams/vizzy**](https://github.com/JVAdams/vizzy).
 
