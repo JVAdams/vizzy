@@ -1,0 +1,401 @@
+---
+title: "Introduction to the tidyverse in R"
+author: "Jean V. Adams (last updated 29 Feb 2020)"
+date: "Table of Contents"
+output:
+  html_document:
+    toc: TRUE
+    toc_depth: 3
+    number_sections: false
+    theme: cerulean
+    highlight: tango
+subtitle: USGS GLSC/LSC All Hands Meeting 2020
+---
+
+```{r setup, echo=FALSE} 
+library(knitr) 
+opts_chunk$set(echo=TRUE, eval=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Purpose
+
+This session will introduce participants to general data wrangling using (tidyverse)[https://www.tidyverse.org/] functions in R, including rearranging, subsetting, and summarizing data using a "piped" workflow.
+
+This presentation and all the code is available at my GitHub site, in the **vizzy** repository, [**GitHub.com/JVAdams/vizzy**](https://github.com/JVAdams/vizzy).
+
+This tutorial closely follows Garrett Grolemund and Hadley Wickham's 2017 book, [**R for Data Science**](https://r4ds.had.co.nz) (**R4DS**), freely available on-line.
+
+# What you need
+
+* [Download](https://cran.r-project.org/) and install R
+* Install and load the tidyverse and nycflights13 packages
+
+```{r, eval=FALSE}
+install.packages("tidyverse")
+install.packages("nycflights13")
+
+library(tidyverse)
+library(nycflights13)
+```
+
+```{r, echo=FALSE}
+library(tidyverse)
+library(nycflights13)
+```
+
+# Look at the data
+
+We'll use the `flights` data with information on all 336,776 flights that departed from New York City in 2013.
+
+```{r}
+flights
+```
+
+Read about the fields.
+
+```{r, eval=FALSE}
+?flights
+```
+
+If you're using RStudio, browse the data.
+
+```{r, eval=FALSE}
+View(flights)
+```
+
+#	Data manipulation
+
+## **filter()** - subset rows
+
+The first argument is the name of the data frame. 
+
+The remaining arguments are expressions that filter the data frame using comparison operators.
+
+For example ...
+
+Find all flights on January 1st:
+
+```{r}
+filter(flights, month == 1, day == 1)
+```
+
+Find all flights that departed in March, November, or December:
+
+```{r}
+filter(flights, month == 3 | month > 10)
+```
+
+For more info see **R4DS** [Filter rows with filter()](https://r4ds.had.co.nz/transform.html#filter-rows-with-filter).
+
+## **arrange()** - reorder rows
+
+The first argument is the name of the data frame. 
+
+The remaining arguments are columns to sort by.
+
+For example ...
+
+Sort all the flights by date:
+
+```{r}
+arrange(flights, year, month, day)
+```
+
+Use `desc()` to order by a column in descending order.
+
+For example ...
+
+Sort by departure delays (`dep_delay`), with the longest delays first:
+
+```{r}
+arrange(flights, desc(dep_delay))
+```
+
+For more info see **R4DS** [Arrange rows with arrange()](https://r4ds.had.co.nz/transform.html#arrange-rows-with-arrange).
+
+## **select()** - subset variables
+
+The first argument is the name of the data frame. 
+
+The remaining arguments are columns to keep.
+
+For example ...
+
+Subset the data frame with just the date columns:
+
+```{r}
+select(flights, year, month, day)
+```
+
+You can use a colon (:) to select a range of variables.
+
+For example ... 
+
+Select all columns between year and departure time (`dep_time`):
+
+```{r}
+select(flights, year:dep_time)
+```
+
+For more info see **R4DS** [Select columns with select()](https://r4ds.had.co.nz/transform.html#select).
+
+## **mutate()** - create new variables
+
+The first argument is the name of the data frame. 
+
+The remaining arguments are new columns to create.
+
+For example ...
+
+Create a new variable called `speed` (in miles per hour) calculated from `distance` (in miles) and `air_time` (in minutes):
+
+```{r}
+mutate(flights, 
+  speed = 60 * distance / air_time
+)
+```
+
+We've got too many variables to see the new variable we just created.  Save the data frame you just created, then subset it to just a few variables:
+
+```{r}
+dat1 <- mutate(flights, 
+  speed = 60 * distance / air_time
+)
+select(dat1, origin, dest, distance, air_time, speed)
+```
+
+You can create multiple variables at once, and you can refer to columns that you just created:
+
+```{r}
+dat1 <- mutate(flights, 
+  air_hours = air_time / 60,
+  speed = distance / air_hours
+  )
+select(dat1, origin, dest, distance, air_hours, speed)
+```
+
+For more info see **R4DS** [Add new variables with mutate()](https://r4ds.had.co.nz/transform.html#add-new-variables-with-mutate).
+
+## **%>%** - pipes
+
+Why pipes?  Pipes help you clearly express a sequence of multiple operations.
+
+Let's return to our previous example, and rewrite the code with pipes.
+
+```{r}
+flights %>% 
+  mutate(
+    air_hours = air_time / 60,
+    speed = distance / air_hours
+  ) %>%
+  select(origin, dest, distance, air_hours, speed)
+```
+
+The pipe operator, `%>%`, basically says, take the data on the left and apply the function on the right.  
+
+It assumes that the function's first argument is the data frame.  *Conveniently, **all** of the functions that we've been talking about take a data frame as their first argument.*  
+
+It allows us to string together a bunch of operations without having to create temporary data frames (like `dat1`) in between.
+
+Often, when applying a bunch of functions, you'll want to save the result to a different data frame.  That's easy.  Just start off with the name of the new data frame.
+
+```{r}
+speed.dat <- flights %>% 
+  mutate(
+    air_hours = air_time / 60,
+    speed = distance / air_hours
+    ) %>%
+  select(origin, dest, distance, air_hours, speed)
+```
+
+For more info see **R4DS** [Pipes](https://r4ds.had.co.nz/pipes.html).
+
+### Your turn
+
+Use pipes to find the fastest flights on January 1st:
+
+ * find all flights on January 1st,
+ * calculate `speed`,
+ * sort by `speed` (with fastest first), and
+ * select destination (`dest`), `distance`, `air_time`, and `speed`.
+
+```{r, echo=FALSE}
+flights %>%
+  filter(month == 1, day == 1) %>%
+  mutate(speed = 60 * distance / air_time) %>%
+  arrange(desc(speed)) %>%
+  select(dest, distance, air_time, speed)
+```
+
+## **summarise()** - collapse data to a single row
+
+The first argument is the name of the data frame (sound familiar?).
+
+The remaining arguments are summary functions.
+
+For example ...
+
+Calculate the mean departure delay:
+
+```{r}
+summarise(flights, 
+  delay = mean(dep_delay, na.rm = TRUE)
+)
+```
+
+You can extend these summary calculations to multiple groups using the `group_by()` function. 
+
+For example ...
+
+Apply the exact same code above to the `flights` data after grouping by month:
+
+```{r}
+flights %>%
+  group_by(month) %>%
+  summarise(
+    delay = mean(dep_delay, na.rm = TRUE)
+  )
+```
+
+Now, add the number of flights to the summary:
+
+```{r}
+flights %>%
+  group_by(month) %>%
+  summarise(
+    delay = mean(dep_delay, na.rm = TRUE),
+    nflights = n()
+  )
+```
+
+For more info see **R4DS** [Grouped summaries with summarise()](https://r4ds.had.co.nz/transform.html#grouped-summaries-with-summarise)
+
+
+
+## **pivot_wider()**
+
+Sometimes data are organized in long format for data analysis or plotting.  Often, you want to pivot the data into a wide format for easy viewing or tabulation.
+
+The first argument is ... ?
+
+The remaining arguments are
+
+* `names_from`: the columns to take variable names from and
+* `values_from`: the columns to take values from.
+
+For example ...
+
+First, create a new data frame that has the monthly mean departure delay for three airlines (`carrier`):
+
+* AA - American,
+* DL - Delta, and
+* WN - Southwest.
+
+```{r}
+example <- flights %>%
+  filter(carrier %in% c("AA", "DL", "WN")) %>%
+  group_by(month, carrier) %>%
+  summarise(
+    delay = mean(dep_delay, na.rm = TRUE)
+  )
+```
+
+Now, make a separate column of monthly delays for each airline.
+
+```{r}
+pivot_wider(example, 
+  names_from = carrier, 
+  values_from = delay
+)
+```
+
+For more info see **R4DS** [Wider](https://r4ds.had.co.nz/tidy-data.html#wider).
+
+## **pivot_longer()**
+
+Sometimes data are organized in a wide format for ease of data entry or viewing.  Often, you want to pivot the data into a long format for data analysis or plotting.
+
+The first argument is ... ?
+
+The remaining arguments are
+
+* `cols` - the columns that represent values,
+* `names_to` - the name you want to assign to those values, and
+* `values_to` - the name you want to assign to the current row values.
+
+For example ...
+
+Save the wide data we just created as a data frame.  Then convert it back to a long data format.
+
+```{r}
+wide.dat <- pivot_wider(example, 
+  names_from = carrier, 
+  values_from = delay
+)
+
+pivot_longer(wide.dat, 
+  cols=AA:WN, 
+  names_to = "airline", 
+  values_to = "dep.delay.min"
+)
+```
+
+For more info see **R4DS** [Longer](https://r4ds.had.co.nz/tidy-data.html#longer).
+
+
+# Wrap up
+
+## Summary
+
+I've introduced you to several core functions for data manipulation in the tidyverse,
+
+* `filter()` - subset rows
+* `arrange()` - reorder rows
+* `select()` - subset variables
+* `mutate()` - create new variables
+* `%>% ` - pipes
+* `summarise()` - collapse data to a single row
+* `pivot_wider()`
+* `pivot_wider()`
+
+## More info
+
+Check out the [Cookbook for R](http://www.cookbook-r.com/) for more examples.
+
+Stuck?  Try [Google](https://www.google.com/) search or search [Stackoverflow with R tags](https://stackoverflow.com/questions/tagged/r).
+
+## Parting challenge
+
+Create a new data frame from the `flights` data, containing information on the number of flights on the 27th `day` of each `month`, to six destinations (`dest`):
+
+* `CUN` - Cancun,
+* `ORD` - Chicago,
+* `DTW` - Detroit,
+* `IAD` - Dulles,
+* `LAS` - Las Vegas, and
+* `MIA` - Miami.
+
+Sort the data frame by the number of flights, with the most flights first.
+
+Then take this new data frame and make it wider, for easier reading as a table, and sort the data frame by month.
+
+```{r, echo=FALSE}
+challenge <- flights %>%
+  filter(
+    day == 27,
+    dest %in% c("CUN", "ORD", "DTW", "IAD", "LAS", "MIA")
+  ) %>%
+  group_by(month, dest) %>%
+  summarise(
+    n.flights = n()
+  ) %>%
+  arrange(desc(n.flights))
+
+challenge
+
+pivot_wider(challenge, 
+    names_from = dest, 
+    values_from = n.flights
+  ) %>%
+  arrange(month)
+```
