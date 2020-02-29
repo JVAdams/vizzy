@@ -1,6 +1,6 @@
 ---
 title: "Introduction to the tidyverse in R"
-author: "Jean V. Adams (last updated 29 Feb 2020)"
+author: "Jean V. Adams"
 date: "Table of Contents"
 output:
   html_document:
