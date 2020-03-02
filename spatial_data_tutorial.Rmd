@@ -1,0 +1,261 @@
+---
+title: "Spatial Data in R"
+subtitle: "GLSC-LSC All Hands Meeting"
+author: "Dan Fitzgerald"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+-----
+
+Spatial capabilities in R have advanced rapidly over the last 3-4 years. There are many packages that provide functions for spatial data management and spatial modeling, many of which rely on the GEOS, GDAL, and PROJ frameworks. Today, we will focus on just three packages: \n
+
+1. **sf** - provides functionality for vector data (points, polygons, lines) 
+2. **raster** - provides functionality for handling raster data
+3. **tmap** - extends plotting capabilities, including interactive plots
+
+The following code installs these three packages, as well as some relevent datasets we will use. 
+
+```{r install, message=FALSE}
+# install packages if neccessary
+#install.packages(c("sf", "raster", "tmap", "spData"))
+
+# attach packages
+library("sf")              # functions for vector data
+library("raster")          # functions for raster data
+library("tmap")            # provides mapping functionality
+library("spData")          # provides spatial datasets for illustration purposes
+
+# load package data
+data("coffee_data")
+data("rivers")
+data("us_states")
+```
+\n
+You will typically have a shapefile, geodatabase, or similar spatial file saved on your machine that you will load into R. Today, we will use a shapefile available from the `spData` package. To load your own shapefile, you would
+simply replace "path.to.file" with the filepath to the shapefile of your choice within the function call to `st_read()`. 
+
+```{r load data}
+# generate file path for reading in shapefile
+path.to.file <- system.file("shapes/world.gpkg", package="spData")
+
+# load shapefile
+world <- st_read(path.to.file)
+
+```
+\n
+
+## sf objects
+
+You can obtain a brief overview of the spatial object by typing the variable name at the console. This is similar to the function `head()`.
+```{r }
+world
+```
+Notice that the object `world` is both an sf object and a data frame. The dataframe is essentially our attribute table in QGIS or ArcGIS. 
+```{r}
+class(world)
+```
+This means that in addition to all of the spatial capabilities, we can also use all of the standard base functionality you are use to using with data frames. This is what separates `sf` from previous spatial packages for vector data, and why spatial data in R has really taken off over the last couple years. Try a few of your favorite functions (or even some from the tidyverse section you learned earlier). 
+```{r eval=FALSE}
+head(world)
+str(world)
+colnames(world)
+subset(world, name_long == "United States")
+```
+
+`sf` acomplishes this in part by using a "sticky" geometry column. Try subsetting the dataframe and notice how regardless of whether you include the geometry column, it comes along for the ride. 
+```{r}
+world[ , 1:4]
+world[ , 1:2]
+```
+
+This geometry column is what allows us to retain the spatial representation as we subset or manipulate the data frame. We can use the base plotting function to create a simple map color coded by country name (column 2).
+```{r}
+plot(world[ , 2])
+```
+
+As we subset out rows of the dataframe, the spatial features are also subsetted accordingly. Here, row 5 is the US. Notice how all three parts of the multipart polygon (Lower 48, Alaska, Hawaii) are contained within the 5th row of the dataframe. 
+
+```{r}
+plot(world[5 , 2])
+```
+
+You generally will not need to worry about this, but if you're curious you can explore how `sf` actually organizes the spatial information within a single column. `sf` uses a list column, which can even store multipart geometry collections (points, lines, and polygons) for a single feature. The 10 lists represent 10 distinct polygons. 
+\n
+
+If you ever needed to view or correct a typo in a coordinate, the function `st_coordinates()` will retrive the values.Here, we are showing only some of the coordinates for the US. 
+```{r}
+str(world$geom[5])
+head(st_coordinates(world[5, ]), n=15)
+```
+\n
+-----
+## Basic spatial operations on vector layers
+
+Now let's start looking at some basic spatial operations you will come across in almost any project. One of the first things you generally want to do is check that you are in the appropriate coordinate reference system. We can check the coordinate system of an sf object using `st_crs()`.
+
+```{r coordinate reference }
+st_crs(world)
+```
+
+You will often be provided data in several coordinate systems and may need to reproject one of the layers. In `sf` we can transfrom a CRS using either an EPSG code, or a proj4 string. Here, we will reproject `world` from WGS84 to Mercator. Notice how the relative sizes/shapes of the countries change under the projected CRS. In the following code we use the function `st_geometry` to plot only the outlines of the countries and not any of the associated variables.  
+```{r reproject layer}
+
+world.proj <- st_transform(world, crs = 3857)
+
+par(mfrow = c(1,2))
+plot(st_geometry(world), main = "WGS84 (EPSG: 4326)")
+plot(st_geometry(world.proj), main = "Mercator (EPSG: 3957)")
+
+```
+
+To keep things simple for our later figures, let's reset the graphics parameters controlling the number of panels per plot. 
+```{r}
+par(mfrow = c(1,1))
+```
+\n
+\n
+You may often have multiple data frames with information linked through a common variable. We can use the same methods we would use to combine two or more data frames with spatial objects. Here, `world` is an sf object, and `coffee_data` has no spatial information. We can link the two based off country names using the `left_join` function in the `dplyr` package. The warning can safely be ignored for our purposes. 
+
+\n\n
+
+We can now create maps of the world using data on coffee production by country. To plot a certain variable, you can specify the column number or the column name in quotes. The legend and color scheme are generated automatically, and can be easily updated if necessary. 
+
+
+```{r, warning=FALSE}
+world.coffee <- dplyr::left_join(world, coffee_data, by = "name_long")
+
+plot(world.coffee["coffee_production_2016"])
+```
+
+So far, we have used the base plotting functions in `sf`. These are great for generating quick plots and are fully customizable. Now, let's begin to explore the package `tmap` which provides some convenient ways for creating nice maps, adding scale bars, and other features. 
+
+\n
+`tmap` works by adding layers to the map using `tm_shape()`. The specific style is designated afterwards. For example, `tm_polygons()` will plot polygons and use the column "coffe_production_2016" to create a chloropleth map. The `tm_layout()` function specifys details for the legend and other map features. We use the `+` operator to connect all the commands and save them to the tmap object `coffee.map`. While not shown here, adding a scale bar is as simple as including `+ tm_scale_bar()`.
+
+```{r}
+
+coffee.map <- tm_shape(world.coffee) +
+              tm_polygons(col = "coffee_production_2016", title = "2016 Coffee Production", palette = "YlOrRd") +
+              tm_layout(legend.bg.color = "white", legend.frame = TRUE)
+```
+
+To plot the tmap object, we can simply type the variable name at the console or use the `print()` function. 
+```{r}
+print(coffee.map)
+```
+
+A really nice feature of the `tmap` package is that we can use the same code to generate an interactive map through leaflet. All we need to do is change the mode to "view" using `tmap_mode()`. Try running the following code. 
+```{r interactive map, eval=FALSE}
+tmap_mode("view")
+print(coffee.map)
+```
+
+Let's return to plot mode for the rest of the tutorial. 
+```{r}
+tmap_mode("plot")
+```
+
+\n
+\n
+Another very common task is spatial subsetting (clipping, intersections, unions, etc.). This can be done using the same `[ , ]` notation we use with dataframes or the functions `st_union()`, `st_intersection()`, `st_difference()`, or `st_sym_difference()`. To illustrate, we start by reprojecting the `us_states` layer to match our global rivers layer that we loaded at the beginning of the tutorial. 
+\n 
+Notice how in the tmap plot we include a second layer on our map by using multiple calls to `tm_shape()`
+```{r}
+us <- st_transform(us_states, crs=4326)
+
+tm_shape(rivers) + tm_lines(col="blue") +
+tm_shape(us) + tm_polygons(col="grey", alpha = 0.3)
+```
+
+The `rivers` layer has a larger spatial extent than we need, so we subset or clip it to the spatial object `us`.
+
+```{r, message=FALSE}
+us.rivers <- rivers[us, ]
+
+tm_shape(us) + tm_polygons(col="grey") + 
+tm_shape(us.rivers) + tm_lines(col="blue")
+```
+ 
+## Zonal statistics on vector and raster data
+
+To illustrate calculating zonal stastics, we will generate some random points. The function `st_sample()` can also be useful for generating psuedo absence points, random sampling locations, etc. 
+```{r, message=FALSE}
+points <- st_sample(us, size = 1000)
+
+# view generated points
+tm_shape(us) + tm_polygons(col="grey") + 
+tm_shape(us.rivers) + tm_lines(col="blue") +
+tm_shape(points) + tm_symbols(col="black")
+```
+
+We will use the function `st_intersects` to generate a list of points that intersect with each state, then use `lengths()` to calculate how many occurrences were in each state. We save the result as a new column in the object `us` called npoints.  
+
+```{r, message=FALSE}
+us$npoints <- lengths(st_intersects(us, points))
+
+tm_shape(us) + tm_polygons(col="npoints", palette = "Reds", title = "Number of Records")
+```
+
+To verify `st_intersects()` worked as expected we can overlay the points layer and adjust their transparency with the alpha parameter in the call to `tm_symbols(`). 
+
+```{r}
+tm_shape(us) + tm_polygons(col="npoints", palette = "Reds", title = "Number of Records") +
+tm_shape(points) + tm_symbols(col = "grey", alpha = 0.4)
+```
+
+\n
+We can perform similar zonal statistic calculations using raster data as well. First, let's generate a random raster of "land use" based on the extent of the object `us`. We can extract the extent of an sf object using `st_bbox()`, which stands for bounding box. The second line of code is randomly defining land use categories 1-20 using the base function `sample()`. We overlay the outline of the US for reference. 
+
+```{r}
+lu <- raster(xmn = st_bbox(us)[1], xmx=st_bbox(us)[3], ymn = st_bbox(us)[2], ymx=st_bbox(us)[4], 
+             resolution = 0.2)
+lu <- setValues(lu, sample(1:20, ncell(lu), replace = TRUE))
+
+plot(lu)
+plot(st_geometry(us), lwd=2, add=TRUE)
+```
+
+When dealing with large datasets with numerous polygons it is significantly faster to convert the polygons to raster before calculating any zonal statistics. This way we can simply do raster (or matrix) algebra. We convert the `us` data to raster using the `rasterize()` function. In order to acomplish this we first convert the GEOID to a number because the rasterize function will not take a character ID.  
+```{r}
+us$GEOID <- as.numeric(us$GEOID)
+us.rast <- rasterize(us, lu, field = "GEOID")
+
+plot(us.rast)
+```
+
+\n
+Now that both datasets are rasters, we can simply use the base `crosstab()` function to tally the number of grid cells for each land use type occurring within each state. Here, each row is a state and each column is a land use type. 
+
+```{r}
+tab <- crosstab(us.rast, lu)
+head(tab)
+```
+
+We can convert these to percentage by dividing by the total number of pixels in each zone. The function `apply()` calculates `x/sum(x)` over each row (or state). the `t()` simple transposes the result. 
+```{r}
+lu.prct <- t(apply(tab, 1, FUN=function(x) x/sum(x)))
+lu.prct <- round(lu.prct, 4)
+head(lu.prct)
+```
+
+Finally, we need to join these results with our spatial layer. We first find the appropriate order of GEOIDs, which we then use to create four new columns for the first 4 land use types. 
+```{r}
+rastord <- order(us$GEOID)
+
+us[rastord, c("lu1", "lu2", "lu3", "lu4")] <- lu.prct[ , 1:4]
+
+tm_shape(us) + tm_polygons(col = "lu1", palette = "Reds", title = "Perctange of LU1")
+```
+
+To save your results to a shapefile in your working directory, use the following code. You could then load this shapefile into QGIS or ArcGIS. 
+```{r}
+st_write(us, "Example_shapefile.shp")
+```
+
+## More Information
+\n
+The book [Geocomputation with R](https://geocompr.robinlovelace.net/) is freely available online and provides a much more in depth look at using R as a GIS. 
+\n
